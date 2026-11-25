@@ -270,4 +270,11 @@ Q7 - REPORT AND REPOSITORY
   ~/devops-lab3$ ab -V | head -n 1
   ~/devops-lab3$ jenkins --version
 
+[E55] Commit and push the documentation
+  ~/devops-lab3$ git status --short | wc -l
+  ~/devops-lab3$ git add -A
+  ~/devops-lab3$ git commit -q -m "Add Terraform scaling variable, Lab 3 report, evidence gallery and command record"
+  ~/devops-lab3$ git push
+  ~/devops-lab3$ git log --oneline -n 5
+
 Repository: https://github.com/Adityaporwal18/devops-lab3

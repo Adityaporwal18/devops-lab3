@@ -1,0 +1,21 @@
+aditya@lima-devops:~/devops-lab3$ git status --short | wc -l
+5
+aditya@lima-devops:~/devops-lab3$ git add -A
+aditya@lima-devops:~/devops-lab3$ git commit -q -m "Add Terraform scaling variable, Lab 3 report, evidence gallery and command record"
+aditya@lima-devops:~/devops-lab3$ git push
+Enumerating objects: 111, done.
+Counting objects: 100% (111/111), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (105/105), done.
+Writing objects: 100% (105/105), 11.24 MiB | 9.08 MiB/s, done.
+Total 105 (delta 8), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (8/8), completed with 1 local object.
+To https://github.com/Adityaporwal18/devops-lab3.git
+   1c7fb6c..8195fca  main -> main
+aditya@lima-devops:~/devops-lab3$ git log --oneline -n 5
+8195fca (HEAD -> main, origin/main, origin/HEAD) Add Terraform scaling variable, Lab 3 report, evidence gallery and command record
+1c7fb6c Remove the deliberately insecure file
+fdc4a5e Add a deliberately insecure file to test the security gate
+addccf9 Add security gate to the pipeline, ELK heap limits, log sender and Jenkins job configuration
+4e38c70 Provision Grafana data source and dashboard from files; keep the admin password out of Git
+aditya@lima-devops:~/devops-lab3$ 

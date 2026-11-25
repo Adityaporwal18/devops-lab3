@@ -16,7 +16,7 @@ Evidence is grouped by lab question. The number at the start of each file name g
 | [Q4 - Centralized logging with the ELK stack](#q4---centralized-logging-with-the-elk-stack) | E26-E31 |
 | [Q5 - Security in the CI/CD pipeline](#q5---security-in-the-cicd-pipeline) | E32-E46 |
 | [Q6 - Feature flags, load testing and Selenium](#q6---feature-flags-load-testing-and-selenium) | E47-E53 |
-| [Q7 - Report and repository](#q7---report-and-repository) | E54-E54 |
+| [Q7 - Report and repository](#q7---report-and-repository) | E54-E56 |
 
 ## Q1 - Infrastructure configuration with Ansible
 
@@ -435,3 +435,17 @@ Versions of the tools used: Ansible core 2.16.3, Terraform 1.17.2, Docker 29.10.
 ![E54 Tool versions](evidence/screenshots/51-tool-versions.png)
 
 Source: [Terminal log](evidence/logs/51-tool-versions.txt)
+
+### E55 - Commit and push the documentation
+
+The Terraform scaling change, the report, the evidence gallery, the command record and the screenshots are committed and pushed to GitHub.
+
+![E55 Commit and push the documentation](evidence/screenshots/55-commit-and-push-documentation.png)
+
+Source: [Terminal log](evidence/logs/55-commit-and-push-documentation.txt)
+
+### E56 - Final repository on GitHub
+
+The repository `Adityaporwal18/devops-lab3` on GitHub with the Ansible, Terraform, monitoring, ELK and pipeline files, the report and the `docs` folder.
+
+![E56 Final repository on GitHub](evidence/screenshots/56-github-final-repository.png)
