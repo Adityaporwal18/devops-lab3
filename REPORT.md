@@ -90,6 +90,8 @@ Evidence: [Q3 in the gallery](docs/EVIDENCE.md#q3---monitoring-with-prometheus-a
 
 **Data path.** [scripts/send-logs.sh](scripts/send-logs.sh) sends JSON log lines over TCP to Logstash. The [Logstash pipeline](elk/logstash/pipeline/logstash.conf) writes them to the Elasticsearch index `devops-lab3`. Kibana reads the index through a data view.
 
+**Collection, parsing, visualization.** Logstash collects the events on a TCP input. Its `json_lines` codec parses each line into separate fields (`application`, `level`, `sequence`, `message`), and Logstash adds `@timestamp`. Because the fields are parsed, Elasticsearch can count the events by level, and Kibana shows each field and a histogram of the events over time.
+
 **Results.** 40 log events were sent.
 
 | Check | Result |
