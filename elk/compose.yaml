@@ -10,6 +10,8 @@ services:
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.17.3
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
     ports:
       - "127.0.0.1:5003:5000"
     volumes:
@@ -23,5 +25,6 @@ services:
       - "127.0.0.1:5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - NODE_OPTIONS=--max-old-space-size=512
     depends_on:
       - elasticsearch
