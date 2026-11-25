@@ -6,7 +6,10 @@ __pycache__/
 *.tfstate
 *.tfstate.*
 *.tfvars
+tfplan
 *.tfplan
-terraform.zip
-terraform-install/
 *.log
+.env
+.DS_Store
+bandit-report.txt
+pip-audit-report.json
