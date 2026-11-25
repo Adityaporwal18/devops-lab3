@@ -1,0 +1,23 @@
+[1]+  Terminated              kubectl port-forward svc/argocd-server -n argocd 8443:443 > /tmp/argocd-port-forward.log 2>&1  (wd: ~/devops-lab4)
+(wd now: ~)
+aditya@lima-devops:~$ git clone https://github.com/Adityaporwal18/devops-lab3.git ~/devops-lab3
+Cloning into '/home/aditya/devops-lab3'...
+remote: Enumerating objects: 90, done.
+remote: Counting objects: 100% (90/90), done.
+remote: Compressing objects: 100% (84/84), done.
+remote: Total 90 (delta 0), reused 90 (delta 0), pack-reused 0 (from 0)
+Receiving objects: 100% (90/90), 4.84 MiB | 412.00 KiB/s, done.
+aditya@lima-devops:~$ cd ~/devops-lab3
+aditya@lima-devops:~/devops-lab3$ git log --oneline
+b18a157 (HEAD -> main, origin/main, origin/HEAD) Initial commit
+aditya@lima-devops:~/devops-lab3$ ls
+Jenkinsfile  README.md  ansible  bandit-report.txt  docs  monitoring             requirements.txt  terraform
+LICENSE.txt  REPORT.md  app      commands.txt       elk   pip-audit-report.json  scripts           tests
+aditya@lima-devops:~/devops-lab3$ git rm -r -q docs scripts bandit-report.txt pip-audit-report.json terraform/tfplan terraform/.terraform.lock.hcl
+aditya@lima-devops:~/devops-lab3$ git commit -q -m "Remove outdated evidence, reports and docs before re-running Lab 3"
+aditya@lima-devops:~/devops-lab3$ git show --stat --oneline HEAD | tail -n 1
+ 57 files changed, 1187 deletions(-)
+aditya@lima-devops:~/devops-lab3$ ls
+Jenkinsfile  README.md  ansible  commands.txt  monitoring        terraform
+LICENSE.txt  REPORT.md  app      elk           requirements.txt  tests
+aditya@lima-devops:~/devops-lab3$ 

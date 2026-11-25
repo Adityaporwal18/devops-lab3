@@ -1,0 +1,8 @@
+aditya@lima-devops:~/devops-lab3$ cat requirements.txt
+flask
+prometheus-client
+aditya@lima-devops:~/devops-lab3$ .venv/bin/pip-audit -r requirements.txt
+No known vulnerabilities found
+aditya@lima-devops:~/devops-lab3$ .venv/bin/bandit -r app monitoring -lll -q; echo "exit code of the HIGH-severity gate: $?"
+exit code of the HIGH-severity gate: 0
+aditya@lima-devops:~/devops-lab3$ 

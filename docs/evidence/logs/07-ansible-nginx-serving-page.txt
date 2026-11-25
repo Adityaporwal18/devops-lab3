@@ -1,0 +1,17 @@
+aditya@lima-devops:~/devops-lab3$ systemctl is-enabled nginx && systemctl is-active nginx
+enabled
+active
+aditya@lima-devops:~/devops-lab3$ curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost/
+HTTP 200
+aditya@lima-devops:~/devops-lab3$ curl -s http://localhost/
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DevOps Lab 3</title>
+</head>
+<body>
+    <h1>DevOps Lab 3</h1>
+    <p>Application configured automatically using Ansible!</p>
+</body>
+</html>
+aditya@lima-devops:~/devops-lab3$ 

@@ -1,0 +1,55 @@
+aditya@lima-devops:~/devops-lab3$ wget -qO- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+aditya@lima-devops:~/devops-lab3$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+deb [arch=arm64 signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com noble main
+aditya@lima-devops:~/devops-lab3$ sudo apt update
+Get:1 https://apt.releases.hashicorp.com noble InRelease [12.8 kB]
+Hit:2 https://download.docker.com/linux/ubuntu noble InRelease                                                       
+Ign:3 https://pkg.jenkins.io/debian-stable binary/ InRelease                                                         
+Hit:4 https://pkg.jenkins.io/debian-stable binary/ Release              
+Get:5 https://apt.releases.hashicorp.com noble/main arm64 Packages [250 kB]
+Hit:7 http://ports.ubuntu.com/ubuntu-ports noble InRelease
+Get:8 http://ports.ubuntu.com/ubuntu-ports noble-updates InRelease [126 kB]
+Hit:9 http://ports.ubuntu.com/ubuntu-ports noble-backports InRelease
+Get:10 http://ports.ubuntu.com/ubuntu-ports noble-security InRelease [126 kB]
+Get:11 http://ports.ubuntu.com/ubuntu-ports noble-updates/main arm64 Packages [1554 kB]
+Get:12 http://ports.ubuntu.com/ubuntu-ports noble-updates/universe arm64 Packages [1774 kB]
+Get:13 http://ports.ubuntu.com/ubuntu-ports noble-security/main arm64 Packages [1302 kB]
+Get:14 http://ports.ubuntu.com/ubuntu-ports noble-security/main Translation-en [242 kB]
+Fetched 5387 kB in 6s (973 kB/s)                                
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+65 packages can be upgraded. Run 'apt list --upgradable' to see them.
+aditya@lima-devops:~/devops-lab3$ sudo apt install terraform -y
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  terraform
+0 upgraded, 1 newly installed, 0 to remove and 65 not upgraded.
+Need to get 33.9 MB of archives.
+After this operation, 119 MB of additional disk space will be used.
+Get:1 https://apt.releases.hashicorp.com noble/main arm64 terraform arm64 1.17.2-1 [33.9 MB]
+Fetched 33.9 MB in 23s (1448 kB/s)                                                                                            
+Selecting previously unselected package terraform.
+(Reading database ... 116036 files and directories currently installed.)
+Preparing to unpack .../terraform_1.17.2-1_arm64.deb ...
+Unpacking terraform (1.17.2-1) ...
+Setting up terraform (1.17.2-1) ...
+Scanning processes...                                                                                                          
+Scanning linux images...                                                                                                       
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+aditya@lima-devops:~/devops-lab3$ terraform version
+Terraform v1.17.2
+on linux_arm64
+
+aditya@lima-devops:~/devops-lab3$ 

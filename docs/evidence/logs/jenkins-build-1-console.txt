@@ -1,0 +1,141 @@
+Started by user Aditya Porwal
+Obtained Jenkinsfile from git https://github.com/Adityaporwal18/devops-lab3.git
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/lib/jenkins/workspace/devops-lab3
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+Cloning the remote Git repository
+Cloning repository https://github.com/Adityaporwal18/devops-lab3.git
+ > git init /var/lib/jenkins/workspace/devops-lab3 # timeout=10
+Fetching upstream changes from https://github.com/Adityaporwal18/devops-lab3.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/Adityaporwal18/devops-lab3.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git config remote.origin.url https://github.com/Adityaporwal18/devops-lab3.git # timeout=10
+ > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
+Avoid second fetch
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision addccf9b48100935ae2bb69f82edf61d4104f4c6 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f addccf9b48100935ae2bb69f82edf61d4104f4c6 # timeout=10
+Commit message: "Add security gate to the pipeline, ELK heap limits, log sender and Jenkins job configuration"
+First time build. Skipping changelog.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Checkout)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/devops-lab3/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Adityaporwal18/devops-lab3.git # timeout=10
+Fetching upstream changes from https://github.com/Adityaporwal18/devops-lab3.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/Adityaporwal18/devops-lab3.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision addccf9b48100935ae2bb69f82edf61d4104f4c6 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f addccf9b48100935ae2bb69f82edf61d4104f4c6 # timeout=10
+Commit message: "Add security gate to the pipeline, ELK heap limits, log sender and Jenkins job configuration"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Install Security Tools)
+[Pipeline] sh
++ python3 -m venv .jenkins-venv
++ .jenkins-venv/bin/pip install -q bandit pip-audit
++ .jenkins-venv/bin/bandit --version
++ head -n 1
+bandit 1.9.4
++ .jenkins-venv/bin/pip-audit --version
+pip-audit 2.10.1
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Bandit Security Scan)
+[Pipeline] sh
++ .jenkins-venv/bin/bandit -r app monitoring -f txt -o bandit-report.txt
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.12.3
+[text]	INFO	Text output written to file: bandit-report.txt
++ test 1 -eq 1
++ cat bandit-report.txt
+Run started:2026-11-25 09:56:27.090554+00:00
+
+Test results:
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: monitoring/app.py:20:17
+19	if __name__ == "__main__":
+20	    app.run(host="0.0.0.0", port=5002)
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 16
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+Files skipped (0):
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Security Gate)
+[Pipeline] sh
++ echo Gate rule: the build fails if Bandit reports any HIGH severity issue.
+Gate rule: the build fails if Bandit reports any HIGH severity issue.
++ .jenkins-venv/bin/bandit -r app monitoring -lll -q
++ echo No HIGH severity issue found. Gate passed.
+No HIGH severity issue found. Gate passed.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Dependency Audit)
+[Pipeline] sh
++ .jenkins-venv/bin/pip-audit -r requirements.txt -f json -o pip-audit-report.json
+No known vulnerabilities found
++ .jenkins-venv/bin/pip-audit -r requirements.txt
+No known vulnerabilities found
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] archiveArtifacts
+Archiving artifacts
+[Pipeline] echo
+DevSecOps pipeline completed successfully!
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS

@@ -1,0 +1,41 @@
+aditya@lima-devops:~/devops-lab3$ until docker compose -f elk/compose.yaml logs logstash 2>/dev/null | grep -q "Pipelines running"; do sleep 5; done; echo "Logstash pipeline is running"
+Logstash pipeline is running
+aditya@lima-devops:~/devops-lab3$ cat scripts/send-logs.sh
+#!/usr/bin/env bash
+set -euo pipefail
+count="${1:-40}"
+host="${2:-localhost}"
+port="${3:-5003}"
+exec 3<>"/dev/tcp/${host}/${port}"
+for i in $(seq 1 "$count"); do
+  level=INFO
+  if (( i % 10 == 0 )); then level=ERROR; elif (( i % 4 == 0 )); then level=WARNING; fi
+  printf '{"application":"devops-lab3","level":"%s","sequence":%d,"message":"Lab 3 log event %d"}\n' "$level" "$i" "$i" >&3
+done
+exec 3>&-
+echo "sent $count log events to ${host}:${port}"
+aditya@lima-devops:~/devops-lab3$ scripts/send-logs.sh 40
+sent 40 log events to localhost:5003
+aditya@lima-devops:~/devops-lab3$ curl -s 'http://localhost:9200/devops-lab3/_count?pretty'
+{
+  "error" : {
+    "root_cause" : [
+      {
+        "type" : "index_not_found_exception",
+        "reason" : "no such index [devops-lab3]",
+        "resource.type" : "index_or_alias",
+        "resource.id" : "devops-lab3",
+        "index_uuid" : "_na_",
+        "index" : "devops-lab3"
+      }
+    ],
+    "type" : "index_not_found_exception",
+    "reason" : "no such index [devops-lab3]",
+    "resource.type" : "index_or_alias",
+    "resource.id" : "devops-lab3",
+    "index_uuid" : "_na_",
+    "index" : "devops-lab3"
+  },
+  "status" : 404
+}
+aditya@lima-devops:~/devops-lab3$ 

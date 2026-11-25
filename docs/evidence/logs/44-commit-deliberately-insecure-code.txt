@@ -1,0 +1,52 @@
+aditya@lima-devops:~/devops-lab3$ cat monitoring/insecure_demo.py
+import subprocess
+
+
+def run(command):
+    return subprocess.call(command, shell=True)
+aditya@lima-devops:~/devops-lab3$ .venv/bin/bandit -r app monitoring -lll -q; echo "exit code of the HIGH-severity gate: $?"
+Run started:2026-11-25 09:57:48.548964+00:00
+
+Test results:
+>> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html
+   Location: monitoring/insecure_demo.py:5:11
+4       def run(command):
+5           return subprocess.call(command, shell=True)
+
+--------------------------------------------------
+
+Code scanned:
+        Total lines of code: 19
+        Total lines skipped (#nosec): 0
+
+Run metrics:
+        Total issues (by severity):
+                Undefined: 0
+                Low: 1
+                Medium: 1
+                High: 1
+        Total issues (by confidence):
+                Undefined: 0
+                Low: 0
+                Medium: 1
+                High: 2
+Files skipped (0):
+exit code of the HIGH-severity gate: 1
+aditya@lima-devops:~/devops-lab3$ git add monitoring/insecure_demo.py
+aditya@lima-devops:~/devops-lab3$ git commit -q -m "Add a deliberately insecure file to test the security gate"
+aditya@lima-devops:~/devops-lab3$ git push
+Enumerating objects: 6, done.
+Counting objects: 100% (6/6), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 434 bytes | 434.00 KiB/s, done.
+Total 4 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/Adityaporwal18/devops-lab3.git
+   addccf9..fdc4a5e  main -> main
+aditya@lima-devops:~/devops-lab3$ date
+Wed Nov 25 15:27:55 IST 2026
+aditya@lima-devops:~/devops-lab3$ 

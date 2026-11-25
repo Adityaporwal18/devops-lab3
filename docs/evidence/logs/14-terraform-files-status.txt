@@ -1,0 +1,5 @@
+aditya@lima-devops:~/devops-lab3/terraform$ cd ~/devops-lab3
+aditya@lima-devops:~/devops-lab3$ git status --short
+?? terraform/.terraform.lock.hcl
+?? terraform/tfplan
+aditya@lima-devops:~/devops-lab3$ 

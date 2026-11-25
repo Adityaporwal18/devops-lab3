@@ -1,73 +1,77 @@
-﻿# Lab 3 | Monitoring, Logging & DevSecOps
+﻿# Lab 3 - Monitoring, Logging & DevSecOps
 
-**DevOps and Automation Lab**  
+**Course:** DevOps and Automation Lab (ENSP461)  
 **Student:** Aditya Porwal | **GitHub:** `Adityaporwal18`  
-**Repository:** [Adityaporwal18/devops-lab3](https://github.com/Adityaporwal18/devops-lab3)
+**Environment:** Ubuntu 24.04.5 LTS virtual machine, Ansible 2.16.3, Terraform 1.17.2, Docker 29.10.1, ELK 8.17.3, Jenkins 2.580.2. Lab run on 25 November 2026.
 
-An evidence-backed record of infrastructure configuration, local provisioning, monitoring, centralized logging, pipeline security scanning, feature flags, load testing and browser automation.
+## Documentation
 
-## Start here
-
-| Resource | Contents |
+| Document | Contents |
 |---|---|
-| [Full lab report](REPORT.md) | Q1-Q7: objectives, configurations, execution, results and limitations |
-| [Evidence gallery](docs/EVIDENCE.md) | 36 images from the original document plus 2 supplementary ELK screenshots |
-| [Architecture](docs/ARCHITECTURE.md) | Actual components, ports and the two application execution modes |
-| [Reproduction guide](docs/REPRODUCE.md) | Steps for rerunning experiments without confusing WSL and Docker targets |
-| [Command reference](commands.txt) | Commands grouped by question; not a fabricated terminal transcript |
-| [Security findings](docs/SECURITY-FINDINGS.md) | Bandit finding, audit scope, Jenkins gate behavior and unresolved risks |
-| [Final checklist](docs/FINAL_CHECKLIST.md) | Submission checks, cleanup and explicitly unproven items |
-| [Original evidence document](docs/source/Lab3-Evidence.docx) | Unchanged 17-page source document |
+| [Lab report](REPORT.md) | Q1-Q7: implementation, measured results, limits and observations |
+| [Evidence gallery](docs/EVIDENCE.md) | Screenshots of every step with captions, plus links to the logs |
+| [Commands executed](commands.txt) | The commands that were run, grouped by question |
+| [Logs](docs/evidence/logs) | Terminal logs, Jenkins console logs and archived scan reports |
 
-## Recorded results
+## Lab questions and results
 
-| Experiment | Observed result | Evidence |
+| Question | Topic | Result |
 |---|---|---|
-| Ansible configuration | First run `changed=2`; repeat `changed=0`; both `failed=0` | [E05 / E08](docs/EVIDENCE.md#q1-ansible) |
-| Terraform provisioning | 2 resources added: one image and one container | [E09-E15](docs/EVIDENCE.md#q2-terraform) |
-| Prometheus / Grafana | Target UP; request counter increases from 22 to approximately 72 | [E18-E23](docs/EVIDENCE.md#q3-monitoring) |
-| ELK logging | 32 JSON sample events indexed and visible as parsed fields | [E24-E25](docs/EVIDENCE.md#q4-logging) |
-| Bandit | 1 Medium B104 finding; 0 High findings in the saved report | [E26](docs/evidence/26-bandit-medium-finding.png) |
-| pip-audit | 8 resolved dependencies; no known vulnerabilities reported at scan time | [E27](docs/evidence/27-dependency-audit-report.png) |
-| Jenkins | Build #1 finishes SUCCESS and archives both scan reports | [E30](docs/evidence/30-jenkins-scans-success.png) |
-| Feature flags | OFF returns the original message; ON returns `NEW FEATURE ENABLED` | [E32-E33](docs/EVIDENCE.md#q6-testing) |
-| ApacheBench, run B | 1,000 requests, 20 concurrent, 0 failures, 1,681.71 requests/s, p95 15 ms | [E34](docs/evidence/34-apachebench-run-b.png) |
-| Selenium | Homepage and enabled-feature checks pass in a remote Chrome session | [E36](docs/evidence/36-selenium-passed.png) |
+| Q1 | Ansible configuration | First run `changed=2`, second run `changed=0` (idempotent) |
+| Q2 | Terraform provisioning | nginx container created, scaled to 3 and back to 1 |
+| Q3 | Prometheus and Grafana | Counter 2 to 202 after 200 requests, shown in both tools |
+| Q4 | ELK logging | 40 log events in Elasticsearch and Kibana |
+| Q5 | Security in CI/CD | Bandit + pip-audit in Jenkins; gate blocked a High severity issue |
+| Q6 | Feature flag, load test, Selenium | Flag toggled by configuration; 2 x 1000 requests with 0 failures; browser test passed |
+| Q7 | Report | [REPORT.md](REPORT.md) |
 
-These are recorded results, not live service-health claims. The two ApacheBench runs are reported separately in [REPORT.md](REPORT.md#q6-feature-flags-load-testing-and-selenium).
+![Grafana dashboard after the traffic test](docs/evidence/screenshots/22-grafana-dashboard-after-traffic.png)
 
-## Implementation map
+## Run it yourself
 
-```text
-ansible/                     Local Nginx configuration playbook and inventory
-app/index.html               Static page managed by Ansible
-terraform/main.tf            Local Docker image/container provisioning
-terraform/.terraform.lock.hcl Provider dependency lock
-monitoring/                  Flask app, Dockerfile, Compose and Prometheus config
-elk/                         Elasticsearch, Logstash and Kibana configuration
-elk/logstash/pipeline/        TCP JSON-lines ingestion pipeline
-tests/test_selenium.py       Remote Chrome browser test
-Jenkinsfile                  Checkout, scanner installation, Bandit and pip-audit
-bandit-report.txt            Saved original static-analysis report
-pip-audit-report.json        Saved original dependency audit
-README.md / REPORT.md        Submission landing page and full report
-commands.txt                 Command reference
-docs/                        Evidence, results, architecture and review notes
-scripts/                     Read-only capture and repository-check helpers
+Ansible (installs nginx and deploys the page on the local machine):
+
+```bash
+ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
 ```
 
-The Logstash configuration is four directory levels below the repository root, so it does not appear in the earlier `find ... -maxdepth 3` listing. It is present in the repository at [elk/logstash/pipeline/logstash.conf](elk/logstash/pipeline/logstash.conf).
+Terraform (Docker must be running):
 
-## Scope and honest limitations
+```bash
+cd terraform
+terraform init
+terraform apply -var web_count=3
+```
 
-This is a local teaching environment, not a production-secure deployment. Terraform demonstrates initial provisioning, not a recorded multi-replica scaling exercise. The ELK records are deliberately generated sample events, not an automatically forwarded stream of Flask access logs.
+Monitoring (copy `monitoring/.env.example` to `monitoring/.env` and set a password first):
 
-The current Jenkinsfile allows Bandit exit code 1 for **any findings**, not only an approved B104 exception; a green build is not a clean static-analysis report. The dependency audit covers its resolved Python requirements, not every image or service in the lab.
+```bash
+docker compose -f monitoring/compose.yaml up -d --build
+```
 
-Monitoring evidence comes from the Docker application. Feature-flag and final load/browser tests were performed after stopping that container and running Flask in WSL. A fresh Grafana scrape of that WSL process has not been demonstrated. See [the two execution modes](docs/ARCHITECTURE.md#application-execution-modes).
+Application: http://localhost:5002 | Prometheus: http://localhost:9090 | Grafana: http://localhost:3003
 
-## Before submitting
+Logging (needs about 2.5 GiB of free memory):
 
-Read [FINAL_CHECKLIST.md](docs/FINAL_CHECKLIST.md). In particular, untrack `terraform/tfplan` while preserving the local copy, avoid publishing credentials/state, and review the unauthenticated Elasticsearch port binding. The included `.gitignore` prevents future accidental staging but cannot remove a file already tracked by Git.
+```bash
+docker compose -f elk/compose.yaml up -d
+scripts/send-logs.sh 40
+curl 'http://localhost:9200/devops-lab3/_count?pretty'
+```
 
-Upload the documentation and evidence to this repository; submit the repository URL, not a local Jenkins/Grafana URL. Do not publish local admin passwords, tokens, Terraform state or binary plan files.
+## Main files
+
+```text
+ansible/                 Inventory and playbook (nginx + page)
+app/index.html           Page deployed by Ansible
+terraform/main.tf        nginx image and containers through the Docker provider
+monitoring/              Flask app with metrics, Prometheus, Grafana provisioning
+elk/                     Elasticsearch, Logstash and Kibana
+scripts/send-logs.sh     Sends JSON log events to Logstash
+tests/test_selenium.py   Selenium browser test
+Jenkinsfile              Bandit scan, security gate, dependency audit
+jenkins/job-config.xml   Jenkins job definition
+commands.txt             Commands executed in the lab
+REPORT.md                Lab report
+docs/EVIDENCE.md         Evidence gallery
+```

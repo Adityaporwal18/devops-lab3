@@ -1,0 +1,52 @@
+aditya@lima-devops:~/devops-lab3$ curl -s 'http://localhost:9200/devops-lab3/_count?pretty'
+{
+  "count" : 40,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  }
+}
+aditya@lima-devops:~/devops-lab3$ curl -s 'http://localhost:9200/_cat/indices/devops-lab3?v&h=health,status,index,docs.count,store.size'
+health status index       docs.count store.size
+yellow open   devops-lab3         40     33.2kb
+aditya@lima-devops:~/devops-lab3$ curl -s 'http://localhost:9200/devops-lab3/_search?size=1&sort=sequence:desc&filter_path=hits.hits._source&pretty'
+{
+  "hits" : {
+    "hits" : [
+      {
+        "_source" : {
+          "application" : "devops-lab3",
+          "level" : "ERROR",
+          "message" : "Lab 3 log event 40",
+          "@version" : "1",
+          "sequence" : 40,
+          "@timestamp" : "2026-11-25T09:50:51.480826824Z"
+        }
+      }
+    ]
+  }
+}
+aditya@lima-devops:~/devops-lab3$ curl -s -H 'Content-Type: application/json' 'http://localhost:9200/devops-lab3/_search?size=0&filter_path=aggregations.levels.buckets&pretty' -d '{"aggs":{"levels":{"terms":{"field":"level.keyword"}}}}'
+{
+  "aggregations" : {
+    "levels" : {
+      "buckets" : [
+        {
+          "key" : "INFO",
+          "doc_count" : 28
+        },
+        {
+          "key" : "WARNING",
+          "doc_count" : 8
+        },
+        {
+          "key" : "ERROR",
+          "doc_count" : 4
+        }
+      ]
+    }
+  }
+}
+aditya@lima-devops:~/devops-lab3$ 

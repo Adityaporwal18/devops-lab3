@@ -1,0 +1,82 @@
+aditya@lima-devops:~/devops-lab3$ docker run -d --name lab3-selenium --add-host=host.docker.internal:host-gateway -p 4444:4444 --shm-size=1g selenium/standalone-chromium:latest
+Unable to find image 'selenium/standalone-chromium:latest' locally
+latest: Pulling from selenium/standalone-chromium
+00dbf11534ae: Pull complete 
+884347597397: Pull complete 
+d5db45bf42cf: Pull complete 
+daeaa3e983f9: Pull complete 
+35a5ebcf04f2: Pull complete 
+2935dff1bd5f: Pull complete 
+e8eae6888566: Pull complete 
+1a681433a326: Pull complete 
+5473a1e688d8: Pull complete 
+720dccf78782: Pull complete 
+a144dad6bd1b: Pull complete 
+a9ec68157fde: Pull complete 
+ae7ff74ea001: Pull complete 
+99518480fc5e: Pull complete 
+e52a86e00136: Pull complete 
+db9fc4129f92: Pull complete 
+84ba20cc157c: Pull complete 
+fb01c08e605c: Pull complete 
+1abcf5b835e7: Pull complete 
+b413d3e74f28: Pull complete 
+2507ae4036fa: Pull complete 
+650c65f260ea: Pull complete 
+359168a8dc1c: Pull complete 
+6f5f548cc4c1: Pull complete 
+9c58877766b2: Pull complete 
+6773d732a28d: Pull complete 
+a58db5aa4f03: Pull complete 
+6c8c83c88ac1: Pull complete 
+1cff4b7f87e9: Pull complete 
+adae547224f8: Pull complete 
+72b156d0e03b: Pull complete 
+562af8150a14: Pull complete 
+d1062c7102ea: Pull complete 
+b7cea6228f7d: Pull complete 
+1f1c861d959e: Pull complete 
+f5a0c4680e24: Pull complete 
+ba2b903804dd: Download complete 
+bf70cf50b33d: Download complete 
+Digest: sha256:63b48b7cfab51ae3604bd11f83d62146961f707bebbce4f98ac542e0be29b645
+Status: Downloaded newer image for selenium/standalone-chromium:latest
+7478d027aeec8c72e78ccfe64c5adae4b4567f407f6d320fa64e0b86314f9e20
+aditya@lima-devops:~/devops-lab3$ until curl -s http://localhost:4444/status | grep -q '"ready": *true'; do sleep 2; done; echo "Selenium server is ready"
+Selenium server is ready
+aditya@lima-devops:~/devops-lab3$ docker ps --filter name=lab3-selenium --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+NAMES           IMAGE                                 STATUS
+lab3-selenium   selenium/standalone-chromium:latest   Up 7 seconds
+aditya@lima-devops:~/devops-lab3$ python3 -m venv .venv
+aditya@lima-devops:~/devops-lab3$ .venv/bin/python -m pip install -q selenium
+aditya@lima-devops:~/devops-lab3$ cat tests/test_selenium.py
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+options = Options()
+options.add_argument("--headless=new")
+options.add_argument("--no-sandbox")
+
+driver = webdriver.Remote(
+    command_executor="http://localhost:4444",
+    options=options
+)
+
+try:
+    driver.get("http://host.docker.internal:5002/")
+    text = driver.find_element("tag name", "body").text
+
+    assert "DevOps Lab 3" in text
+    assert "NEW FEATURE ENABLED" in text
+
+    print("PASS: Homepage loaded successfully")
+    print("PASS: Feature flag enabled")
+    print("PASS: Selenium browser automation completed")
+
+finally:
+    driver.quit()
+aditya@lima-devops:~/devops-lab3$ .venv/bin/python tests/test_selenium.py
+PASS: Homepage loaded successfully
+PASS: Feature flag enabled
+PASS: Selenium browser automation completed
+aditya@lima-devops:~/devops-lab3$ 

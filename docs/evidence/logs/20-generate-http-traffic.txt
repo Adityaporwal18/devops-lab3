@@ -1,0 +1,12 @@
+aditya@lima-devops:~/devops-lab3$ curl -s http://localhost:5002/metrics | grep '^lab3_http_requests_total'
+lab3_http_requests_total 2.0
+aditya@lima-devops:~/devops-lab3$ for i in $(seq 1 200); do curl -s -o /dev/null http://localhost:5002/; sleep 0.05; done; echo "sent 200 requests"
+sent 200 requests
+aditya@lima-devops:~/devops-lab3$ curl -s http://localhost:5002/metrics | grep '^lab3_http_requests_total'
+lab3_http_requests_total 202.0
+aditya@lima-devops:~/devops-lab3$ curl -s 'http://localhost:9090/api/v1/query?query=lab3_http_requests_total' | python3 -m json.tool | grep -A3 '"value"'
+                "value": [
+                    1795599580.019,
+                    "202"
+                ]
+aditya@lima-devops:~/devops-lab3$ 

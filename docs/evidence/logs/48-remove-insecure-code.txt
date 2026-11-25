@@ -1,0 +1,17 @@
+aditya@lima-devops:~/devops-lab3$ git rm -q monitoring/insecure_demo.py
+aditya@lima-devops:~/devops-lab3$ .venv/bin/bandit -r app monitoring -lll -q; echo "exit code of the HIGH-severity gate: $?"
+exit code of the HIGH-severity gate: 0
+aditya@lima-devops:~/devops-lab3$ git commit -q -m "Remove the deliberately insecure file"
+aditya@lima-devops:~/devops-lab3$ git push
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 307 bytes | 307.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/Adityaporwal18/devops-lab3.git
+   fdc4a5e..1c7fb6c  main -> main
+aditya@lima-devops:~/devops-lab3$ date
+Wed Nov 25 15:29:59 IST 2026
+aditya@lima-devops:~/devops-lab3$ 

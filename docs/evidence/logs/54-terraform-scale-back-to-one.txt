@@ -1,0 +1,15 @@
+aditya@lima-devops:~/devops-lab3/terraform$ terraform apply -auto-approve -var web_count=1 | tail -n 6
+
+Outputs:
+
+web_urls = [
+  "http://localhost:8085",
+]
+aditya@lima-devops:~/devops-lab3/terraform$ terraform state list
+docker_container.web[0]
+docker_image.nginx
+aditya@lima-devops:~/devops-lab3/terraform$ docker ps --filter name=lab3-terraform-web --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+NAMES                STATUS          PORTS
+lab3-terraform-web   Up 29 minutes   0.0.0.0:8085->80/tcp
+aditya@lima-devops:~/devops-lab3/terraform$ cd ~/devops-lab3
+aditya@lima-devops:~/devops-lab3$ 

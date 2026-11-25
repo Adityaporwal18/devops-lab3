@@ -1,0 +1,19 @@
+aditya@lima-devops:~/devops-lab3$ cd ~/devops-lab3/terraform
+aditya@lima-devops:~/devops-lab3/terraform$ git diff --stat main.tf
+ terraform/main.tf | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+aditya@lima-devops:~/devops-lab3/terraform$ terraform fmt -check && terraform validate
+Success! The configuration is valid.
+
+aditya@lima-devops:~/devops-lab3/terraform$ terraform plan -var web_count=3 | grep -E "will be|has moved|Plan:|name  |external"  # docker_container.web has moved to docker_container.web[0]
+        name                                        = "lab3-terraform-web"
+  # docker_container.web[1] will be created
+      + hostname                                    = (known after apply)
+      + name                                        = "lab3-terraform-web-2"
+          + external = 8086
+  # docker_container.web[2] will be created
+      + hostname                                    = (known after apply)
+      + name                                        = "lab3-terraform-web-3"
+          + external = 8087
+Plan: 2 to add, 0 to change, 0 to destroy.
+aditya@lima-devops:~/devops-lab3/terraform$ 

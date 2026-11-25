@@ -1,0 +1,18 @@
+aditya@lima-devops:~/devops-lab3$ docker compose -f ~/devops-lab4/bluegreen/compose.yaml down
+[+] down 4/4
+ ✔ Container bluegreen-nginx-1 Removed                                                                                     1.4s
+ ✔ Container bluegreen-green-1 Removed                                                                                    10.8s
+ ✔ Container bluegreen-blue-1  Removed                                                                                    10.8s
+ ✔ Network bluegreen_default   Removed                                                                                     0.1s
+aditya@lima-devops:~/devops-lab3$ minikube stop
+✋  Stopping node "minikube"  ...
+🛑  Powering off "minikube" via SSH ...
+🛑  1 node stopped.
+aditya@lima-devops:~/devops-lab3$ docker ps
+CONTAINER ID   IMAGE            COMMAND           CREATED             STATUS             PORTS                                         NAMES
+db8517597b22   devops-lab2:v1   "python app.py"   About an hour ago   Up About an hour   0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp   lab2-app
+aditya@lima-devops:~/devops-lab3$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       1.4Gi       1.3Gi       1.2Mi       1.3Gi       2.4Gi
+Swap:             0B          0B          0B
+aditya@lima-devops:~/devops-lab3$ 

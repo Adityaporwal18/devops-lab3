@@ -1,0 +1,8 @@
+aditya@lima-devops:~/devops-lab3$ ENABLE_NEW_FEATURE=true docker compose -f monitoring/compose.yaml up -d app
+[+] up 1/1
+ ✔ Container monitoring-app-1 Started                                                                                     10.7s
+aditya@lima-devops:~/devops-lab3$ docker compose -f monitoring/compose.yaml exec -T app printenv ENABLE_NEW_FEATURE
+true
+aditya@lima-devops:~/devops-lab3$ curl -s http://localhost:5002/; echo
+DevOps Lab 3 - NEW FEATURE ENABLED
+aditya@lima-devops:~/devops-lab3$ 

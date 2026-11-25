@@ -1,0 +1,8 @@
+aditya@lima-devops:~/devops-lab3$ docker rm -f lab3-selenium
+lab3-selenium
+aditya@lima-devops:~/devops-lab3$ ENABLE_NEW_FEATURE=false docker compose -f monitoring/compose.yaml up -d app
+[+] up 1/1
+ ✔ Container monitoring-app-1 Started                                                                                     11.0s
+aditya@lima-devops:~/devops-lab3$ curl -s http://localhost:5002/; echo
+DevOps Lab 3 - Prometheus Monitoring
+aditya@lima-devops:~/devops-lab3$ 

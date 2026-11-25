@@ -1,0 +1,22 @@
+aditya@lima-devops:~/devops-lab3$ docker compose -f elk/compose.yaml ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}'
+SERVICE         IMAGE                                                  STATUS
+elasticsearch   docker.elastic.co/elasticsearch/elasticsearch:8.17.3   Up 4 minutes
+kibana          docker.elastic.co/kibana/kibana:8.17.3                 Up 4 minutes
+logstash        docker.elastic.co/logstash/logstash:8.17.3             Up 4 minutes
+aditya@lima-devops:~/devops-lab3$ docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'
+NAME                  MEM USAGE / LIMIT
+elk-logstash-1        534.2MiB / 3.813GiB
+elk-kibana-1          635.5MiB / 3.813GiB
+elk-elasticsearch-1   1.02GiB / 3.813GiB
+lab3-terraform-web    5.223MiB / 3.813GiB
+lab2-app              20.6MiB / 3.813GiB
+aditya@lima-devops:~/devops-lab3$ docker compose -f elk/compose.yaml down
+[+] down 4/4
+ ✔ Container elk-logstash-1      Removed                                                                                   6.1s
+ ✔ Container elk-kibana-1        Removed                                                                                   4.3s
+ ✔ Container elk-elasticsearch-1 Removed                                                                                   3.5s
+ ✔ Network elk_default           Removed                                                                                   0.1s
+aditya@lima-devops:~/devops-lab3$ sudo systemctl start jenkins
+aditya@lima-devops:~/devops-lab3$ systemctl is-active jenkins
+active
+aditya@lima-devops:~/devops-lab3$ 

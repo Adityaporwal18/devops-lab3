@@ -1,159 +1,273 @@
-﻿LAB 3 - MONITORING, LOGGING & DEVSECOPS
-COMMAND REFERENCE - NOT A RAW EXECUTION LOG
+LAB 3 - COMMANDS EXECUTED
+=========================
 
-Commands below reconstruct the lab workflow from the supplied transcript and source
-files. Successful results are documented by the linked evidence gallery. Run sections
-intentionally; do not paste this entire file as a shell script. Commands that change
-services or generate traffic are marked by their section. All Linux commands run in
-Ubuntu WSL; Windows WSL commands run in PowerShell.
+Environment: Ubuntu 24.04.5 LTS virtual machine (Lima 2.3.0, Apple M1 MacBook Pro), user aditya, host lima-devops.
+Date: 25 November 2026.
 
-[WINDOWS / POWERSHELL]
-wsl -d Ubuntu
-# wsl --shutdown stops WSL distributions; do not use it while lab services are needed.
+Every command listed under a terminal evidence item was extracted from that item's terminal
+log (docs/evidence/logs/), so the commands appear exactly as they were run.
+Items are grouped by lab question; the number at the start of each log/screenshot file name
+gives the real chronological order. The text before '$' is the working directory.
+Steps done in a browser, in an editor or through the Jenkins REST API are described in words.
+Evidence IDs (E01...) match docs/EVIDENCE.md.
 
-[SETUP - VERIFY EXISTING INSTALLATIONS]
-cd ~/devops-lab3
-git --version
-python3 --version
-docker --version
-docker compose version
-docker run --rm hello-world
-ansible --version
-ansible-playbook --version
-terraform version
 
-[Q1 - LOCAL ANSIBLE CONFIGURATION]
-ansible -i ansible/inventory.ini webservers -m ping
-sudo ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
-curl http://localhost
-sudo ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
-# First successful screenshot: ok=4 changed=2 unreachable=0 failed=0.
-# Repeated screenshot: ok=4 changed=0 unreachable=0 failed=0.
-# Earlier --ask-become-pass attempts timed out; do not store the sudo password.
+Q1 - INFRASTRUCTURE CONFIGURATION WITH ANSIBLE
+----------------------------------------------
 
-[Q2 - TERRAFORM LOCAL DOCKER PROVISIONING]
-cd ~/devops-lab3/terraform
-terraform init
-terraform fmt
-terraform validate
-terraform plan -out=tfplan
-terraform apply tfplan
-terraform state list
-docker ps --filter name=lab3-terraform-web
-curl -I http://localhost:8085
-cd ~/devops-lab3
-# Save .terraform.lock.hcl, not state or tfplan, in Git.
-# Do not destroy existing resources to manufacture fresh screenshots.
+[E01] Clone the repository and remove outdated evidence
+  ~$ git clone https://github.com/Adityaporwal18/devops-lab3.git ~/devops-lab3
+  ~$ cd ~/devops-lab3
+  ~/devops-lab3$ git log --oneline
+  ~/devops-lab3$ ls
+  ~/devops-lab3$ git rm -r -q docs scripts bandit-report.txt pip-audit-report.json terraform/tfplan terraform/.terraform.lock.hcl
+  ~/devops-lab3$ git commit -q -m "Remove outdated evidence, reports and docs before re-running Lab 3"
+  ~/devops-lab3$ git show --stat --oneline HEAD | tail -n 1
+  ~/devops-lab3$ ls
 
-[Q3 - MONITORING STACK]
-# Stop any foreground host Flask process on port 5002 before starting the app container.
-docker compose -f monitoring/compose.yaml up -d --build
-docker compose -f monitoring/compose.yaml ps
-curl http://localhost:5002/
-curl http://localhost:5002/metrics
-for i in $(seq 1 20); do curl -s http://localhost:5002/ > /dev/null; done
-for i in $(seq 1 50); do curl -s http://localhost:5002/ > /dev/null; done
-# Prometheus target: app:5002, scrape interval 5s.
-# Browser: http://localhost:9090/targets
-# Query: lab3_http_requests_total
-# Grafana: http://localhost:3003
-# Grafana data source URL: http://prometheus:9090
-# Dashboard: DevOps Lab 3 Monitoring; panel: HTTP Request Count.
+[E02] Free memory before the lab
+  ~/devops-lab3$ docker compose -f ~/devops-lab4/bluegreen/compose.yaml down
+  ~/devops-lab3$ minikube stop
+  ~/devops-lab3$ docker ps
+  ~/devops-lab3$ free -h
 
-[Q4 - ELK STACK AND SAMPLE EVENTS]
-# The original Elasticsearch configuration disables authentication; review exposure first.
-docker compose -f elk/compose.yaml up -d
-docker compose -f elk/compose.yaml ps
-curl http://localhost:9200
-for i in $(seq 1 20); do
-  echo "{\"message\":\"Lab 3 request $i\",\"level\":\"INFO\",\"application\":\"devops-lab3\"}" | nc -q 1 localhost 5003
-done
-curl "http://localhost:9200/devops-lab3/_count?pretty"
-# netcat package used if absent: sudo apt install -y netcat-openbsd
-# Kibana: http://localhost:5601
-# Data view: DevOps Lab 3 Logs; index pattern: devops-lab3.
-# The recorded count was 32 after partial sends and retries; reruns add records.
+[E03] Install Ansible
+  ~/devops-lab3$ git rm -q LICENSE.txt
+  ~/devops-lab3$ git commit -q -m "Remove Terraform's licence file that was committed by mistake"
+  ~/devops-lab3$ sudo apt install ansible apache2-utils -y
+  ~/devops-lab3$ ansible --version
 
-[Q5 - SCANNERS: ORIGINAL WORKFLOW]
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install bandit pip-audit
-bandit -r . -x ./.venv,./terraform,./elk -f txt -o bandit-report.txt
-cat bandit-report.txt
-pip-audit -r requirements.txt -f json -o pip-audit-report.json
-python3 -m json.tool pip-audit-report.json
-# These commands overwrite root reports; prefer fresh output paths for later reruns.
-# The first audit attempt failed because root requirements.txt did not exist.
-# Root requirements.txt was then created with flask and prometheus-client.
+[E04] Inventory, playbook and connectivity
+  ~/devops-lab3$ cat ansible/inventory.ini
+  ~/devops-lab3$ cat ansible/deploy.yml
+  ~/devops-lab3$ ansible -i ansible/inventory.ini webservers -m ping
 
-[Q5 - JENKINS]
-sudo systemctl start jenkins
-sudo systemctl is-active jenkins
-# Browser: http://localhost:8080
-# Pipeline script from SCM / Git / https://github.com/Adityaporwal18/devops-lab3.git
-# Branch */main; script Jenkinsfile; job devops-lab3.
-# Pipeline creates .jenkins-venv and runs:
-# .jenkins-venv/bin/bandit -r app monitoring -f txt -o bandit-report.txt || test "$?" -eq 1
-# .jenkins-venv/bin/pip-audit -r requirements.txt -f json -o pip-audit-report.json
-# Artifact paths: bandit-report.txt,pip-audit-report.json
-# This tolerates all Bandit findings with exit code 1, not just B104.
+[E05] First playbook run
+  ~/devops-lab3$ ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
 
-[Q6 - FEATURE FLAGS: WSL HOST PROCESS]
-cd ~/devops-lab3
-# Identify the exact conflicting container, not arbitrary processes:
-docker ps --format "table {{.Names}}\t{{.Ports}}"
-# Observed container using port 5002: monitoring-app-1.
-docker stop monitoring-app-1
-.venv/bin/python -m pip install -r monitoring/requirements.txt
-ENABLE_NEW_FEATURE=false .venv/bin/python monitoring/app.py
-# Capture OFF page at http://localhost:5002, then Ctrl+C in the server terminal.
-ENABLE_NEW_FEATURE=true .venv/bin/python monitoring/app.py
-# Capture ON page and keep the server running for the next tests.
-# Prometheus's app:5002 target is not the host process.
+[E06] nginx serves the deployed page
+  ~/devops-lab3$ systemctl is-enabled nginx && systemctl is-active nginx
+  ~/devops-lab3$ curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost/
+  ~/devops-lab3$ curl -s http://localhost/
 
-[Q6 - LOAD TEST: SECOND UBUNTU TERMINAL]
-sudo apt install -y apache2-utils
-ab -n 1000 -c 20 http://127.0.0.1:5002/
-# Run A and Run B are distinct captured results; see docs/results/load-tests.csv.
+[E07] Second run is idempotent
+  ~/devops-lab3$ ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
 
-[Q6 - SELENIUM: SECOND UBUNTU TERMINAL]
-docker run -d --name lab3-selenium -p 127.0.0.1:4444:4444 --shm-size="2g" selenium/standalone-chrome:latest
-# If already created, use docker start lab3-selenium instead.
-curl -s http://localhost:4444/status
-cd ~/devops-lab3
-.venv/bin/python -m pip install selenium
-.venv/bin/python tests/test_selenium.py
-# Remote browser target: http://host.docker.internal:5002/
+[E08] Deployed page in the browser
+  Browser: opened http://localhost/
 
-[GIT - RECORDED WORKFLOW]
-cd ~/devops-lab3
-git init
-git branch -M main
-git status --short
-git add .
-git commit -m "DevOps Lab 3 - Monitoring Logging and DevSecOps"
-git remote add origin https://github.com/Adityaporwal18/devops-lab3.git
-# Authenticate as the repository owner; commit identity is not authentication.
-# Do not put a token in a remote URL, script or screenshot.
-git push -u origin main
-git add monitoring/app.py tests/test_selenium.py
-git commit -m "Implement feature flags and Selenium automated testing"
-git push origin main
-# For existing repositories, do NOT rerun git init/remote add as a routine update.
+Q2 - SCALABLE INFRASTRUCTURE WITH TERRAFORM
+-------------------------------------------
 
-[RECOMMENDED FOLLOW-UP - NOT CLAIMED AS EXECUTED]
-# After copying this documentation pack including .gitignore into the existing repo:
-cd ~/devops-lab3
-git rm --cached --ignore-unmatch terraform/tfplan
-git add .gitignore README.md REPORT.md commands.txt docs scripts
-git status --short
-git commit -m "Document Lab 3 evidence and stop tracking Terraform plan"
-git push origin main
+[E09] Install Terraform
+  ~/devops-lab3$ wget -qO- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  ~/devops-lab3$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+  ~/devops-lab3$ sudo apt update
+  ~/devops-lab3$ sudo apt install terraform -y
+  ~/devops-lab3$ terraform version
 
-# Optional read-only local checks; outputs are new captures, not historic evidence:
-python3 scripts/check-submission.py
-bash scripts/capture-final-state.sh
+[E10] terraform init
+  ~/devops-lab3$ cd ~/devops-lab3/terraform
+  ~/devops-lab3/terraform$ cat main.tf
+  ~/devops-lab3/terraform$ terraform init
 
-# Restore Docker monitoring only after stopping the foreground host Flask process:
-docker compose -f monitoring/compose.yaml up -d --build app
-# Verify Prometheus target UP again; capture proof before making a claim.
+[E11] Validate and plan
+  ~/devops-lab3/terraform$ terraform fmt -check && terraform validate
+  ~/devops-lab3/terraform$ terraform plan -out=tfplan
+
+[E12] Apply, state and running container
+  ~/devops-lab3/terraform$ terraform apply -auto-approve tfplan
+  ~/devops-lab3/terraform$ terraform state list
+  ~/devops-lab3/terraform$ docker ps --filter name=lab3-terraform-web
+  ~/devops-lab3/terraform$ curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:8085/
+
+[E13] Terraform-provisioned nginx in the browser
+  Browser: opened http://localhost:8085/
+
+[E14] Files created by Terraform
+  ~/devops-lab3/terraform$ cd ~/devops-lab3
+  ~/devops-lab3$ git status --short
+
+[E15] Scaling: plan for three containers
+  ~/devops-lab3$ cd ~/devops-lab3/terraform
+  ~/devops-lab3/terraform$ git diff --stat main.tf
+  ~/devops-lab3/terraform$ terraform fmt -check && terraform validate
+  ~/devops-lab3/terraform$ terraform plan -var web_count=3 | grep -E "will be|has moved|Plan:|name  |external"  # docker_container.web has moved to docker_container.web[0]
+
+[E15] Scaling: plan for three containers
+  Editor: added the web_count variable, count and an output to terraform/main.tf
+
+[E16] Scaling: three containers running
+  ~/devops-lab3/terraform$ terraform apply -auto-approve -var web_count=3 | tail -n 12
+  ~/devops-lab3/terraform$ terraform state list
+  ~/devops-lab3/terraform$ docker ps --filter name=lab3-terraform-web --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+  ~/devops-lab3/terraform$ for p in 8085 8086 8087; do curl -s -o /dev/null -w "port $p: HTTP %{http_code}\n" http://localhost:$p/; done
+
+[E17] Scaling back to one container
+  ~/devops-lab3/terraform$ terraform apply -auto-approve -var web_count=1 | tail -n 6
+  ~/devops-lab3/terraform$ terraform state list
+  ~/devops-lab3/terraform$ docker ps --filter name=lab3-terraform-web --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+  ~/devops-lab3/terraform$ cd ~/devops-lab3
+
+Q3 - MONITORING WITH PROMETHEUS AND GRAFANA
+-------------------------------------------
+
+[E18] Start the monitoring stack
+  ~/devops-lab3$ git add -A
+  ~/devops-lab3$ git commit -q -m "Provision Grafana data source and dashboard from files; keep the admin password out of Git"
+  ~/devops-lab3$ cat monitoring/prometheus.yml
+  ~/devops-lab3$ docker compose -f monitoring/compose.yaml up -d --build --quiet-pull
+  ~/devops-lab3$ docker compose -f monitoring/compose.yaml ps --format 'table {{.Service}}\t{{.State}}\t{{.Ports}}'
+  ~/devops-lab3$ curl -s http://localhost:5002/; echo
+  ~/devops-lab3$ curl -s http://localhost:5002/metrics | grep lab3_http_requests_total
+
+[E18] Start the monitoring stack
+  Editor: added Grafana data source and dashboard provisioning files; the Grafana admin password is read
+          from monitoring/.env, which is not committed
+
+[E19] Application homepage
+  Browser: opened http://localhost:5002/
+
+[E23] Generate HTTP traffic
+  ~/devops-lab3$ curl -s http://localhost:5002/metrics | grep '^lab3_http_requests_total'
+  ~/devops-lab3$ for i in $(seq 1 200); do curl -s -o /dev/null http://localhost:5002/; sleep 0.05; done; echo "sent 200 requests"
+  ~/devops-lab3$ curl -s http://localhost:5002/metrics | grep '^lab3_http_requests_total'
+  ~/devops-lab3$ curl -s 'http://localhost:9090/api/v1/query?query=lab3_http_requests_total' | python3 -m json.tool | grep -A3 '"value"'
+
+Q4 - CENTRALIZED LOGGING WITH THE ELK STACK
+-------------------------------------------
+
+[E26] Start the ELK stack
+  ~/devops-lab3$ docker compose -f monitoring/compose.yaml down
+  ~/devops-lab3$ sudo systemctl stop jenkins
+  ~/devops-lab3$ free -h
+  ~/devops-lab3$ cat elk/logstash/pipeline/logstash.conf
+  ~/devops-lab3$ docker compose -f elk/compose.yaml up -d --quiet-pull
+  ~/devops-lab3$ until curl -s http://localhost:9200 > /dev/null; do sleep 3; done; curl -s http://localhost:9200 | grep -E '"number"|"cluster_name"|tagline'
+  ~/devops-lab3$ docker compose -f elk/compose.yaml ps --format 'table {{.Service}}\t{{.State}}\t{{.Ports}}'
+
+[E27] Send 40 log events (first count too early)
+  ~/devops-lab3$ until docker compose -f elk/compose.yaml logs logstash 2>/dev/null | grep -q "Pipelines running"; do sleep 5; done; echo "Logstash pipeline is running"
+  ~/devops-lab3$ cat scripts/send-logs.sh
+  ~/devops-lab3$ scripts/send-logs.sh 40
+  ~/devops-lab3$ curl -s 'http://localhost:9200/devops-lab3/_count?pretty'
+
+[E28] Kibana ready, data view created
+  ~/devops-lab3$ until curl -s http://localhost:5601/api/status | grep -q '"level":"available"'; do sleep 5; done; echo "Kibana is available"
+  ~/devops-lab3$ curl -s -X POST http://localhost:5601/api/data_views/data_view -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d '{"data_view":{"id":"devops-lab3","title":"devops-lab3","timeFieldName":"@timestamp"}}' | python3 -c 'import sys,json; d=json.load(sys.stdin)["data_view"]; print("data view created:", d["id"], "| index pattern:", d["title"], "| time field:", d["timeFieldName"])'
+  ~/devops-lab3$ docker compose -f elk/compose.yaml ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}'
+
+[E29] Elasticsearch holds 40 documents
+  ~/devops-lab3$ curl -s 'http://localhost:9200/devops-lab3/_count?pretty'
+  ~/devops-lab3$ curl -s 'http://localhost:9200/_cat/indices/devops-lab3?v&h=health,status,index,docs.count,store.size'
+  ~/devops-lab3$ curl -s 'http://localhost:9200/devops-lab3/_search?size=1&sort=sequence:desc&filter_path=hits.hits._source&pretty'
+  ~/devops-lab3$ curl -s -H 'Content-Type: application/json' 'http://localhost:9200/devops-lab3/_search?size=0&filter_path=aggregations.levels.buckets&pretty' -d '{"aggs":{"levels":{"terms":{"field":"level.keyword"}}}}'
+
+[E30] Kibana Discover
+  Browser: opened Kibana Discover at http://localhost:5601 with the data view devops-lab3
+
+[E31] ELK memory use, then stop
+  ~/devops-lab3$ docker compose -f elk/compose.yaml ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}'
+  ~/devops-lab3$ docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'
+  ~/devops-lab3$ docker compose -f elk/compose.yaml down
+  ~/devops-lab3$ sudo systemctl start jenkins
+  ~/devops-lab3$ systemctl is-active jenkins
+
+Q5 - SECURITY IN THE CI/CD PIPELINE
+-----------------------------------
+
+[E32] Bandit scan
+  ~/devops-lab3$ .venv/bin/python -m pip install -q bandit pip-audit
+  ~/devops-lab3$ .venv/bin/bandit -r app monitoring
+
+[E33] Dependency audit and gate rule
+  ~/devops-lab3$ cat requirements.txt
+  ~/devops-lab3$ .venv/bin/pip-audit -r requirements.txt
+  ~/devops-lab3$ .venv/bin/bandit -r app monitoring -lll -q; echo "exit code of the HIGH-severity gate: $?"
+
+[E34] Commit and push the pipeline
+  ~/devops-lab3$ git status --short
+  ~/devops-lab3$ git add -A
+  ~/devops-lab3$ git commit -q -m "Add security gate to the pipeline, ELK heap limits, log sender and Jenkins job configuration"
+  ~/devops-lab3$ git push
+  ~/devops-lab3$ git log --oneline -n 6
+
+[E34] Commit and push the pipeline
+  Editor: added the Security Gate stage, pollSCM trigger and console output of the reports to the Jenkinsfile
+
+[E35] Build #1 console - start
+  Jenkins REST API (signed in as the Jenkins user aditya; credentials not recorded):
+    curl -X POST 'http://localhost:8080/createItem?name=devops-lab3' \
+         -H 'Content-Type: application/xml' --data-binary @jenkins/job-config.xml
+    curl -X POST http://localhost:8080/job/devops-lab3/build      # build #1, same as "Build Now"
+
+[E40] Commit deliberately insecure code
+  ~/devops-lab3$ cat monitoring/insecure_demo.py
+  ~/devops-lab3$ .venv/bin/bandit -r app monitoring -lll -q; echo "exit code of the HIGH-severity gate: $?"
+  ~/devops-lab3$ git add monitoring/insecure_demo.py
+  ~/devops-lab3$ git commit -q -m "Add a deliberately insecure file to test the security gate"
+  ~/devops-lab3$ git push
+  ~/devops-lab3$ date
+
+[E40] Commit deliberately insecure code
+  Editor: created monitoring/insecure_demo.py (subprocess call with shell=True)
+
+[E44] Remove the insecure code
+  ~/devops-lab3$ git rm -q monitoring/insecure_demo.py
+  ~/devops-lab3$ .venv/bin/bandit -r app monitoring -lll -q; echo "exit code of the HIGH-severity gate: $?"
+  ~/devops-lab3$ git commit -q -m "Remove the deliberately insecure file"
+  ~/devops-lab3$ git push
+  ~/devops-lab3$ date
+
+Q6 - FEATURE FLAGS, LOAD TESTING AND SELENIUM
+---------------------------------------------
+
+[E47] Feature flag off
+  ~/devops-lab3$ grep -n -A3 "ENABLE_NEW_FEATURE" monitoring/app.py monitoring/compose.yaml
+  ~/devops-lab3$ curl -s http://localhost:5002/; echo
+  ~/devops-lab3$ docker compose -f monitoring/compose.yaml exec -T app printenv ENABLE_NEW_FEATURE
+
+[E48] Load test run A (flag off)
+  ~/devops-lab3$ ab -n 1000 -c 20 http://localhost:5002/
+
+[E49] Feature flag on
+  ~/devops-lab3$ ENABLE_NEW_FEATURE=true docker compose -f monitoring/compose.yaml up -d app
+  ~/devops-lab3$ docker compose -f monitoring/compose.yaml exec -T app printenv ENABLE_NEW_FEATURE
+  ~/devops-lab3$ curl -s http://localhost:5002/; echo
+
+[E50] New feature in the browser
+  Browser: opened http://localhost:5002/
+
+[E51] Load test run B (flag on)
+  ~/devops-lab3$ ab -n 1000 -c 20 http://localhost:5002/
+
+[E52] Selenium browser test
+  ~/devops-lab3$ docker run -d --name lab3-selenium --add-host=host.docker.internal:host-gateway -p 4444:4444 --shm-size=1g selenium/standalone-chromium:latest
+  ~/devops-lab3$ until curl -s http://localhost:4444/status | grep -q '"ready": *true'; do sleep 2; done; echo "Selenium server is ready"
+  ~/devops-lab3$ docker ps --filter name=lab3-selenium --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+  ~/devops-lab3$ python3 -m venv .venv
+  ~/devops-lab3$ .venv/bin/python -m pip install -q selenium
+  ~/devops-lab3$ cat tests/test_selenium.py
+  ~/devops-lab3$ .venv/bin/python tests/test_selenium.py
+
+[E53] Clean up
+  ~/devops-lab3$ docker rm -f lab3-selenium
+  ~/devops-lab3$ ENABLE_NEW_FEATURE=false docker compose -f monitoring/compose.yaml up -d app
+  ~/devops-lab3$ curl -s http://localhost:5002/; echo
+
+Q7 - REPORT AND REPOSITORY
+--------------------------
+
+[E54] Tool versions
+  ~/devops-lab3$ ansible --version | head -n 1
+  ~/devops-lab3$ terraform version | head -n 1
+  ~/devops-lab3$ docker --version
+  ~/devops-lab3$ docker image inspect prom/prometheus:latest grafana/grafana:latest --format '{{index .RepoTags 0}}  version {{index .Config.Labels "org.opencontainers.image.version"}}'
+  ~/devops-lab3$ docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E "elastic|selenium"
+  ~/devops-lab3$ .venv/bin/bandit --version | head -n 1
+  ~/devops-lab3$ .venv/bin/pip-audit --version
+  ~/devops-lab3$ .venv/bin/python -m pip show selenium | grep -E "^(Name|Version)"
+  ~/devops-lab3$ ab -V | head -n 1
+  ~/devops-lab3$ jenkins --version
+
+Repository: https://github.com/Adityaporwal18/devops-lab3

@@ -1,217 +1,202 @@
-﻿# Lab 3: Monitoring, Logging & DevSecOps
+﻿# Lab 3 Report - Monitoring, Logging & DevSecOps
 
-**Course:** DevOps and Automation Lab  
+**Course:** DevOps and Automation Lab (ENSP461)  
 **Student:** Aditya Porwal  
-**Repository:** [Adityaporwal18/devops-lab3](https://github.com/Adityaporwal18/devops-lab3)  
-**Recorded work:** November 4-5, 2026 (terminal UTC and browser-local timestamps)
+**Repository:** https://github.com/Adityaporwal18/devops-lab3  
+**Environment:** Ubuntu 24.04.5 LTS virtual machine (Lima 2.3.0) on a MacBook Pro (Apple M1, macOS 26.4)  
+**Date of this run:** 25 November 2026
 
-[README](README.md) | [Evidence gallery](docs/EVIDENCE.md) | [Commands](commands.txt) | [Final checklist](docs/FINAL_CHECKLIST.md)
+[Repository overview](README.md) | [Evidence gallery](docs/EVIDENCE.md) | [Commands executed](commands.txt)
 
-## 1. Objective and scope
+## 1. Objective
 
-The assignment requires an automated, observable infrastructure workflow: application configuration with Ansible, infrastructure provisioning with Terraform, metrics with Prometheus/Grafana, centralized logging with Elasticsearch/Logstash/Kibana, security scanning within CI/CD, feature flags, load testing and Selenium browser automation. Configuration files, execution evidence and observations are maintained in GitHub.
+To automate infrastructure configuration and provisioning, observe a running application with metrics and centralized logs, add security checks to the CI/CD pipeline, and test the application with a feature flag, load tests and an automated browser test.
 
-The implementation uses Ubuntu under WSL2, Docker Desktop and the Jenkins installation from the earlier labs. Different experiments use different targets: Ansible configures the local Nginx service; Terraform creates a separate Docker Nginx container; monitoring uses a Flask container; the final feature/load/browser experiments use Flask directly in WSL. They are not represented as one fully automated deployment pipeline.
+## 2. Environment and tools
 
-## 2. Environment and source artifacts
-
-| Tool / component | Version or configuration recorded | Source |
-|---|---|---|
-| Host environment | Windows + Ubuntu WSL2; working directory `/home/user/devops-lab3` | Terminal context and screenshots |
-| Docker / Compose | 29.8.0 / v5.5.1 | [E01](docs/evidence/01-docker-compose-and-hello-world.png) |
-| Python for Ansible / local tooling | 3.14.4 | [E02](docs/evidence/02-ansible-version.png) |
-| Ansible | core 2.20.1 | [E02](docs/evidence/02-ansible-version.png) |
-| Terraform / Docker provider | 1.14.0 / 3.9.0 selected during init | [E03](docs/evidence/03-terraform-version.png), [E09](docs/evidence/09-terraform-init.png) |
-| Flask container base | `python:3.12-slim` | [Dockerfile](monitoring/Dockerfile) |
-| Prometheus / Grafana | `prom/prometheus:latest`, `grafana/grafana:latest` | [Compose](monitoring/compose.yaml) |
-| Elasticsearch / Logstash / Kibana | 8.17.3 | [ELK Compose](elk/compose.yaml) |
-| Jenkins | Existing local service at port 8080 | [Jenkins evidence](docs/evidence/30-jenkins-scans-success.png) |
-| Browser automation | Remote Selenium Chrome container, headless browser | [Test](tests/test_selenium.py) |
-
-These versions describe the captured lab, not a recommendation to install an old or floating release. A `latest` tag does not establish a reproducible image digest. The provider lock file is retained; local state and binary plans should not be published.
-
-## Q1. Configure infrastructure and automate application configuration
-
-### Aim and implementation
-
-Configure the local Ubuntu target with an Ansible inventory and playbook. [inventory.ini](ansible/inventory.ini) defines `localhost` in `webservers` with `ansible_connection=local`. [deploy.yml](ansible/deploy.yml) installs Nginx, copies [app/index.html](app/index.html) to `/var/www/html/index.html` with mode `0644`, and starts/enables the Nginx service.
-
-### Execution and verification
-
-Connectivity was checked with `ansible -i ansible/inventory.ini webservers -m ping`, which returned `pong`. An initial privilege-escalation prompt timed out. The successful local run used:
-
-```bash
-sudo ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
-```
-
-The recorded first recap was `ok=4 changed=2 unreachable=0 failed=0`. A request to `http://localhost` returned the configured HTML, and the same page was visible in the browser. Repeating the same playbook produced `ok=4 changed=0 unreachable=0 failed=0`.
-
-### Observation and result
-
-The second run demonstrates idempotency for this configuration: the intended state was already present and no tasks reported changes. The Python interpreter-discovery warning remained visible but did not prevent the successful runs. The sudo timeout's underlying cause was not established; using `sudo` for this localhost experiment is the observed workaround, not evidence of a general Ansible/WSL fix.
-
-**Evidence:** [E04-E08](docs/EVIDENCE.md#q1-ansible). **Scope:** one local target, not remote cloud nodes.
-
-## Q2. Provision scalable infrastructure using Terraform
-
-### Aim and implementation
-
-Use configuration files, initialization, planning and application to provision local Docker infrastructure. [main.tf](terraform/main.tf) declares the `kreuzwerker/docker` provider with constraint `~> 3.0`, a `docker_image.nginx` resource using `nginx:alpine`, and a `docker_container.web` named `lab3-terraform-web`. The container maps host port 8085 to port 80. `keep_locally = true` is configured for the image.
-
-### Execution
-
-```bash
-cd terraform
-terraform init
-terraform fmt
-terraform validate
-terraform plan -out=tfplan
-terraform apply tfplan
-terraform state list
-```
-
-Initialization selected provider v3.9.0 and generated the dependency lock file. Validation succeeded. The plan showed **2 to add, 0 to change, 0 to destroy**; application reported **2 added, 0 changed, 0 destroyed**. The Docker container was visible and `curl -I http://localhost:8085` returned HTTP 200. The browser displayed the Nginx welcome page. The state listing contained `docker_container.web` and `docker_image.nginx`.
-
-### Observation and result
-
-Declarative initial provisioning is demonstrated. The two resources are **one image and one container**, not two replicas. No `count`, `for_each`, second instance, scale-up/scale-down output or Terraform-managed autoscaling is shown. Therefore, the broad question title's scaling capability is not demonstrated beyond single-instance provisioning; obtain an additional scaling exercise if your instructor requires that interpretation.
-
-The saved binary `terraform/tfplan` was found tracked during repository review. The supplied ignore-file update and cleanup instructions address future tracking. The actual state file was not in the reviewed GitHub tree. Neither a plan nor state dump is needed as public evidence; the screenshots of plan/apply and resource names are sufficient records of the observed commands.
-
-**Evidence:** [E09-E15](docs/EVIDENCE.md#q2-terraform). **Follow-up:** [Terraform cleanup](docs/FINAL_CHECKLIST.md#1-remove-the-tracked-terraform-plan).
-
-## Q3. Set up monitoring using Prometheus and Grafana
-
-### Aim and implementation
-
-The application in [monitoring/app.py](monitoring/app.py) provides `/` and `/metrics`. A Prometheus counter named `lab3_http_requests_total` is incremented by the homepage handler. The metric description says total HTTP requests, but the implemented scope is specifically calls handled by `/`; requests to `/metrics` do not increment it.
-
-[monitoring/compose.yaml](monitoring/compose.yaml) starts `app`, `prometheus` and `grafana`. Prometheus scrapes `app:5002` every 5 seconds using [prometheus.yml](monitoring/prometheus.yml). Grafana uses `http://prometheus:9090` as its data-source URL. Published browser ports are 5002, 9090 and 3003 respectively.
-
-### Execution and observed results
-
-The stack was started with `docker compose up -d --build` from `monitoring/`. The target was UP. Querying `lab3_http_requests_total` returned **22** in the captured sample. Additional HTTP requests were generated with shell loops. The saved Grafana dashboard, **DevOps Lab 3 Monitoring**, contains a panel titled **HTTP Request Count**; its graph subsequently rises to approximately **72**.
-
-### Observation and result
-
-Metrics collection and visualization are demonstrated for the Docker app. The displayed Grafana samples are not a post-ApacheBench benchmark graph. Later testing stopped `monitoring-app-1` and ran Flask directly in WSL. Because the saved scrape target is the Docker service name `app:5002`, those later host-process requests are not automatically monitored by the original target. No final restored-target or post-load-test Grafana proof is included.
-
-The dashboard is documented by screenshots. A native dashboard JSON export was not supplied; exporting it would improve reproducibility without inventing its saved object.
-
-**Evidence:** [E16-E23](docs/EVIDENCE.md#q3-monitoring).
-
-## Q4. Implement centralized logging using the ELK stack
-
-### Aim and data path
-
-The ELK services run through [elk/compose.yaml](elk/compose.yaml). The pipeline [elk/logstash/pipeline/logstash.conf](elk/logstash/pipeline/logstash.conf) listens on container TCP port 5000, exposed locally as port 5003, with `codec => json_lines`. It outputs events to Elasticsearch at `http://elasticsearch:9200` using the index `devops-lab3`, and also emits a console representation.
-
-```text
-Generated JSON sample events -> TCP 127.0.0.1:5003 -> Logstash JSON-lines codec
-                            -> Elasticsearch devops-lab3 index -> Kibana Discover
-```
-
-### Execution and observed results
-
-The shell loop sent JSON events containing `message`, `level: INFO` and `application: devops-lab3`. The loop was partially executed and retried; the observed indexed total is **32**, not exactly the nominal 20 from a single run.
-
-`curl http://localhost:9200/devops-lab3/_count?pretty` returned `count: 32` and zero failed shards. Kibana's data view **DevOps Lab 3 Logs** displays 32 records with parsed `message`, `level`, `application`, `@timestamp` and `@version` fields.
-
-### Observation and result
-
-The evidence demonstrates collection, JSON parsing, indexing and inspection of sample logs. There is no separate Logstash `filter` block: field parsing occurs in the input codec. These are explicitly generated demonstration events; automatic collection of actual Flask or Nginx access logs has not been configured or demonstrated.
-
-Elasticsearch security is disabled in the recorded local configuration, and its port is published without a loopback restriction. This is a security limitation, not a production configuration. Binding the host port to localhost is recommended in [SECURITY-FINDINGS.md](docs/SECURITY-FINDINGS.md); the recommendation is not claimed as an already executed change.
-
-**Evidence:** [E24-E25 and E37-E38](docs/EVIDENCE.md#q4-logging).
-
-## Q5. Integrate security into the CI/CD pipeline
-
-### Tools and pipeline
-
-Bandit scans Python source and pip-audit checks resolved Python dependencies. The saved [Jenkinsfile](Jenkinsfile) defines Checkout, Install Security Tools, Bandit Security Scan and Dependency Audit stages. It creates `.jenkins-venv`, installs both scanners, scans `app` and `monitoring`, audits root `requirements.txt`, and archives `bandit-report.txt` and `pip-audit-report.json`.
-
-### Recorded findings
-
-The saved [Bandit report](bandit-report.txt) contains one issue: **B104: hardcoded_bind_all_interfaces**, severity Medium, confidence Medium, CWE-605. It refers to `app.run(host="0.0.0.0", port=5002)` at line 17 of the earlier monitoring app. Subsequent feature-flag edits shift source line numbers, so the report is retained as an earlier snapshot, not relabeled as a scan of the final file. It reports 13 scanned lines, one Medium issue and zero High issues.
-
-The [pip-audit report](pip-audit-report.json) lists the following eight resolved dependencies with no known vulnerabilities at the time of that audit:
-
-| Dependency | Recorded version |
+| Component | Observed value |
 |---|---|
-| flask | 3.1.3 |
-| prometheus-client | 0.26.0 |
-| blinker | 1.9.0 |
-| click | 8.5.0 |
-| itsdangerous | 2.2.0 |
-| jinja2 | 3.1.6 |
-| markupsafe | 3.0.4 |
-| werkzeug | 3.1.9 |
+| Operating system | Ubuntu 24.04.5 LTS, aarch64 (virtual machine with 4 CPUs and 4 GiB RAM) |
+| Ansible | core 2.16.3 |
+| Terraform | v1.17.2, provider `kreuzwerker/docker` v3.9.0 |
+| Docker / Compose | 29.10.1 / v5.8.0 |
+| Monitoring | `prom/prometheus:latest`, `grafana/grafana:latest` |
+| Logging | Elasticsearch, Logstash and Kibana 8.17.3 |
+| Security tools | Bandit 1.9.4, pip-audit 2.10.1 |
+| Testing | ApacheBench 2.3, Selenium 4.54.0 with `selenium/standalone-chromium` |
+| Jenkins | 2.580.2, job `devops-lab3` |
 
-Jenkins build #1 shows the scan stages, artifact archiving and `Finished: SUCCESS`.
+Evidence: [tool versions](docs/evidence/screenshots/51-tool-versions.png)
 
-### Gate behavior and secure-practice limits
+The VM has 3.8 GiB of memory, so the stacks were run one after another: the Lab 4 containers and Minikube were stopped first, and the monitoring stack and Jenkins were stopped while the ELK stack was running.
 
-The current Bandit command ends with `|| test "$?" -eq 1`. This accepts the normal findings exit status regardless of which issue was found; it is **not** a B104-specific allowlist, severity gate or remediation. pip-audit runs without that bypass, so its nonzero status fails its stage. Archive configuration allows an empty archive and does not prove that all expected reports must always be present.
+## Q1 - Configure infrastructure and automate application configuration (Ansible)
 
-A zero-known-vulnerability dependency audit is not a guarantee of a vulnerability-free application, and it is not an audit of ELK images, OS packages or the Selenium image. The requirements are unpinned; a new run can resolve different versions. The Q5 evidence predates the feature-flag commit, so rerun Jenkins for the final revision before describing the final code as freshly scanned.
+**Implementation.** [ansible/inventory.ini](ansible/inventory.ini) defines the group `webservers` with `localhost`. The playbook [ansible/deploy.yml](ansible/deploy.yml) has three tasks: install nginx, copy [app/index.html](app/index.html) to `/var/www/html`, and start and enable the service.
 
-Credentials were entered interactively during Git authentication rather than embedded in the documented source. Further controls and open items are listed in [SECURITY-FINDINGS.md](docs/SECURITY-FINDINGS.md). The report does not claim that the current lab is fully hardened.
+**Results.**
 
-**Evidence:** [E26-E30](docs/EVIDENCE.md#q5-devsecops).
+| Run | Recap | Meaning |
+|---|---|---|
+| Connectivity | `ping: pong` | Ansible can manage the host |
+| First run | `ok=4 changed=2 failed=0` | nginx installed and the page deployed |
+| Second run | `ok=4 changed=0 failed=0` | Nothing to change: the playbook is idempotent |
 
-## Q6. Feature flags, load testing and Selenium
+`curl http://localhost/` returned HTTP 200 with the deployed page, and nginx is enabled and active.
 
-### Feature flag
+![Second run changes nothing](docs/evidence/screenshots/08-ansible-second-run-idempotent.png)
 
-The homepage reads `ENABLE_NEW_FEATURE`, defaulting to `false`. When the value lowercased equals `true`, it returns **DevOps Lab 3 - NEW FEATURE ENABLED**; otherwise it returns **DevOps Lab 3 - Prometheus Monitoring**. The `/metrics` route remains in the source.
+Evidence: [Q1 in the gallery](docs/EVIDENCE.md#q1---infrastructure-configuration-with-ansible)
 
-For the recorded feature tests, the original Docker app occupying port 5002 was stopped. Flask then ran in the local virtual environment with the flag OFF and ON in separate starts. Browser screenshots show both responses. This is an environment-variable flag demonstrated by restarting the process; it is not a remote feature-management service or a demonstrated hot toggle.
+## Q2 - Provision scalable infrastructure using Terraform
 
-### Load testing: two distinct runs
+**Implementation.** [terraform/main.tf](terraform/main.tf) uses the Docker provider to manage an nginx image and nginx containers. The number of containers is a variable (`web_count`), so the infrastructure is scaled by changing one value.
 
-Both terminal screenshots use `ab -n 1000 -c 20 http://127.0.0.1:5002/`. The first is a 36-byte response test; the later enabled-feature response has 34 bytes. They are separate measurements, not interchangeable numbers.
+**Results.**
 
-| Metric | Run A - document page 14 | Run B - document page 16 |
-|---|---:|---:|
-| Complete requests | 1,000 | 1,000 |
-| Concurrency | 20 | 20 |
+| Step | Command | Result |
+|---|---|---|
+| Initialise | `terraform init` | Provider v3.9.0 installed |
+| Validate and plan | `terraform validate`, `terraform plan -out=tfplan` | Valid; 2 to add |
+| Apply | `terraform apply tfplan` | 2 added: image and one container on port 8085 (HTTP 200) |
+| Scale out | `terraform apply -var web_count=3` | 2 added: containers on ports 8086 and 8087; all three return HTTP 200 |
+| Scale in | `terraform apply -var web_count=1` | The two extra containers are destroyed |
+
+![Three containers after scaling](docs/evidence/screenshots/53-terraform-scale-to-three-containers.png)
+
+**Scope.** The infrastructure is local Docker containers on one machine. The same workflow (plan, apply, change a variable to scale) applies to cloud resources, but no cloud provider was used. The state file is local and is not committed.
+
+Evidence: [Q2 in the gallery](docs/EVIDENCE.md#q2---scalable-infrastructure-with-terraform)
+
+## Q3 - Set up monitoring using Prometheus and Grafana
+
+**Implementation.** The Flask application in [monitoring/app.py](monitoring/app.py) exposes the counter `lab3_http_requests_total` at `/metrics`. Prometheus scrapes it every 5 seconds ([prometheus.yml](monitoring/prometheus.yml)). Grafana's data source and dashboard are provisioned from files in [monitoring/grafana](monitoring/grafana), so the dashboard is reproducible.
+
+**Results.**
+
+| Check | Before traffic | After 200 requests |
+|---|---|---|
+| Counter at `/metrics` | 2 | 202 |
+| Prometheus query `lab3_http_requests_total` | 2 | 202 |
+| Grafana "Total HTTP requests" panel | 2 | 202 |
+
+Prometheus showed the target `lab3-app` as **UP**.
+
+![Grafana dashboard after the traffic test](docs/evidence/screenshots/22-grafana-dashboard-after-traffic.png)
+
+Evidence: [Q3 in the gallery](docs/EVIDENCE.md#q3---monitoring-with-prometheus-and-grafana)
+
+## Q4 - Implement centralized logging using the ELK stack
+
+**Data path.** [scripts/send-logs.sh](scripts/send-logs.sh) sends JSON log lines over TCP to Logstash. The [Logstash pipeline](elk/logstash/pipeline/logstash.conf) writes them to the Elasticsearch index `devops-lab3`. Kibana reads the index through a data view.
+
+**Results.** 40 log events were sent.
+
+| Check | Result |
+|---|---|
+| `_count` on the index | 40 |
+| Aggregation by level | INFO 28, WARNING 8, ERROR 4 |
+| Kibana Discover | Documents (40), with all fields of each event |
+
+![Kibana Discover with 40 documents](docs/evidence/screenshots/34-kibana-discover-40-documents.png)
+
+**A problem that occurred.** The first count, taken 8 seconds after sending, returned `index_not_found_exception`. The events had been accepted by Logstash but Elasticsearch had not created the index yet. A later count returned 40. Log pipelines are asynchronous, so a check directly after sending can be too early.
+
+**Scope.** Security is disabled in this Elasticsearch (`xpack.security.enabled=false`) and the heap sizes are reduced to fit the VM. That is acceptable for a local lab, not for production. The log events are generated test data, not logs of a real application.
+
+Evidence: [Q4 in the gallery](docs/EVIDENCE.md#q4---centralized-logging-with-the-elk-stack)
+
+## Q5 - Integrate security into the CI/CD pipeline
+
+**Pipeline.** The [Jenkinsfile](Jenkinsfile) has these stages:
+
+| Stage | What it does |
+|---|---|
+| Install Security Tools | Installs Bandit and pip-audit in a virtual environment |
+| Bandit Security Scan | Static analysis of the Python code; the report is printed and archived |
+| Security Gate | Fails the build if Bandit reports any **High** severity issue |
+| Dependency Audit | `pip-audit` checks `requirements.txt` against known vulnerabilities |
+
+**Findings.**
+
+| Tool | Finding | Severity | Decision |
+|---|---|---|---|
+| Bandit | B104: the application binds to `0.0.0.0` (`monitoring/app.py`, line 20) | Medium | Accepted: the application runs in a container and must listen on all interfaces to be reachable |
+| pip-audit | No known vulnerabilities in 8 packages (Flask 3.1.3, prometheus-client 0.26.0 and their dependencies) | - | Nothing to fix |
+
+**Gate behaviour.**
+
+| Build | Time | Cause | Revision | Outcome |
+|---|---|---|---|---|
+| #1 | 15:26:04 | Started by user Aditya Porwal | `addccf9` | Gate passed (0 High), audit clean - SUCCESS |
+| #2 | 15:29:09 | SCM change: deliberately insecure file | `fdc4a5e` | Gate found B602 (`shell=True`, High) - **FAILURE**, Dependency Audit skipped |
+| #3 | 15:31:09 | SCM change: file removed | `1c7fb6c` | Gate passed again - SUCCESS |
+
+Later documentation pushes are scanned automatically in the same way.
+
+![Build #2: the security gate fails](docs/evidence/screenshots/46-jenkins-build-2-security-gate-failed.png)
+
+**Limits.** The gate only blocks High severity findings, so the Medium finding passes. `requirements.txt` does not pin versions, so the audit checks whatever versions are current on the day of the build. Bandit and pip-audit do not scan the container images.
+
+Evidence: [Q5 in the gallery](docs/EVIDENCE.md#q5---security-in-the-cicd-pipeline)
+
+## Q6 - Feature flags, load testing and Selenium
+
+**Feature flag.** The application reads `ENABLE_NEW_FEATURE`. Recreating the container with the value `true` changed the page from *Prometheus Monitoring* to *NEW FEATURE ENABLED* without changing code or rebuilding the image.
+
+**Load tests.** ApacheBench, 1000 requests, concurrency 20, one run with the flag off and one with it on.
+
+| Metric | Run A (flag off) | Run B (flag on) |
+|---|---|---|
 | Failed requests | 0 | 0 |
-| Document length | 36 bytes | 34 bytes |
-| Time for tests | 0.609 s | 0.595 s |
-| Requests per second | 1,642.37 | 1,681.71 |
-| Mean time per request | 12.178 ms | 11.893 ms |
-| Mean time across concurrent requests | 0.609 ms | 0.595 ms |
-| p50 | 12 ms | 11 ms |
-| p90 | 13 ms | 14 ms |
-| p95 | 14 ms | 15 ms |
-| p99 | 25 ms | 16 ms |
-| Longest request | 34 ms | 20 ms |
+| Requests per second | 1560.74 | 1510.49 |
+| Mean time per request | 12.814 ms | 13.241 ms |
+| 50% / 90% / 95% / 99% | 11 / 14 / 19 / 29 ms | 12 / 17 / 23 / 28 ms |
+| Longest request | 42 ms | 33 ms |
 
-Run B is the terminal result supplied after the feature-flag demonstration. Run A is retained as a separate earlier result; its 36-byte body is consistent with the original response, but the screenshot alone does not independently establish every runtime setting. The results describe short local tests of this lightweight endpoint. They do not establish sustained production capacity or a general performance advantage of one flag state.
+The two runs differ by about 3%. Each is a single short run on a shared VM, so this difference is within normal variation and does not show that the flag affects performance.
 
-The [machine-readable results](docs/results/load-tests.csv) are manually transcribed from the two terminal screenshots, not raw exports of ApacheBench. E35 is a summary graphic of run B and is excluded as independent proof.
+**Selenium.** [tests/test_selenium.py](tests/test_selenium.py) drives a Chromium browser in a Selenium container, opens the application and checks the page text. All three checks passed.
 
-### Selenium automated browser test
+![Selenium test passed](docs/evidence/screenshots/28-selenium-test-passed.png)
 
-The script [tests/test_selenium.py](tests/test_selenium.py) opens a remote Chrome session via `http://localhost:4444`. Chrome runs in the Selenium container and visits `http://host.docker.internal:5002/`. It reads the body, checks for `DevOps Lab 3` and `NEW FEATURE ENABLED`, prints three PASS messages, and quits the browser in a `finally` block. The provided execution screenshot shows all three PASS messages.
+Evidence: [Q6 in the gallery](docs/EVIDENCE.md#q6---feature-flags-load-testing-and-selenium)
 
-This test verifies the homepage and enabled flag, not every endpoint, both flag states, browser compatibility or performance. It ran manually in the local environment and is not a stage of the reviewed Jenkinsfile. The supplied test uses headless mode and `--no-sandbox`; that browser configuration belongs to the isolated lab, not a recommendation for untrusted browsing.
+## Q7 - Report and documentation
 
-**Evidence:** [E31-E36](docs/EVIDENCE.md#q6-testing).
+| Record | Location |
+|---|---|
+| Configuration and provisioning | [ansible](ansible), [terraform/main.tf](terraform/main.tf) |
+| Monitoring | [monitoring](monitoring) |
+| Logging | [elk](elk), [scripts/send-logs.sh](scripts/send-logs.sh) |
+| Pipeline | [Jenkinsfile](Jenkinsfile), [jenkins/job-config.xml](jenkins/job-config.xml) |
+| Commands | [commands.txt](commands.txt) (extracted from the terminal logs) |
+| Screenshots with captions | [docs/EVIDENCE.md](docs/EVIDENCE.md) |
+| Terminal logs, Jenkins console logs, archived scan reports | [docs/evidence/logs](docs/evidence/logs) |
 
-## Q7. Report, documentation and submission evidence
+### Architecture
 
-This report is accompanied by the original screenshots, a source-to-image manifest, the original Word evidence document, command reference, architecture description, reproduction guide, security review and final checklist. The report is intended to be read directly from the submitted GitHub repository.
+```mermaid
+flowchart LR
+    A[Ansible playbook] -->|configures| B[nginx on the VM]
+    C[Terraform] -->|provisions| D[nginx containers]
+    E[Flask app /metrics] -->|scraped every 5 s| F[Prometheus]
+    F --> G[Grafana dashboard]
+    H[Log events] -->|TCP JSON| I[Logstash]
+    I --> J[Elasticsearch]
+    J --> K[Kibana]
+    L[GitHub] -. polled .-> M[Jenkins: Bandit, gate, pip-audit]
+```
 
-All 36 original document images are preserved unchanged. Two additional ELK screenshots from the conversation supplement them. E20 is explicitly marked as an intermediate Grafana editor; E35 is marked as a derived summary. The newly supplied scripts are convenience helpers, not records of commands already run on the student's machine.
+### Observations
+
+- An idempotent playbook can be run repeatedly; only the first run changed the system.
+- Terraform kept the existing container when scaling from one to three and only added the two new ones.
+- The metric value was identical in the application, Prometheus and Grafana, which confirms the whole monitoring path.
+- Log data arrived with a short delay; the first check was too early.
+- The security gate stopped a commit with a High severity issue and skipped the remaining stage.
+- A feature flag changed behaviour by configuration alone.
 
 ## Conclusion
 
-The recorded experiments demonstrate local Ansible configuration and idempotency, Terraform image/container provisioning, metrics visualization, parsing and inspection of generated logs, security scanning within Jenkins, environment-based feature control, two local load tests and a passing Selenium test. Important remaining qualifications are single-instance Terraform scope, advisory Bandit handling, local-network exposure in the lab configuration, missing native dashboard exports, and the difference between Docker monitoring and WSL test execution.
-
-The [final checklist](docs/FINAL_CHECKLIST.md) separates evidence already present from cleanup and optional extension work. No grade or faculty acceptance is inferred from the screenshots.
-
-## References and provenance
-
-Experiment observations link to [EVIDENCE.md](docs/EVIDENCE.md) and the actual repository files. Additional explanations of tool behavior and recommended improvements are separately sourced in [REFERENCES.md](docs/REFERENCES.md); they are not substituted for execution proof.
+Infrastructure was configured with Ansible and provisioned and scaled with Terraform. The application was monitored with Prometheus and Grafana, and log events were collected in Elasticsearch and viewed in Kibana. The Jenkins pipeline scans code and dependencies and blocks High severity findings. A feature flag, two load tests and a Selenium test completed the lab. Everything ran on one local VM, so the results show that each mechanism works; they are not production measurements.

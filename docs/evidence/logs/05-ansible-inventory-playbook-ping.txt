@@ -1,0 +1,36 @@
+aditya@lima-devops:~/devops-lab3$ cat ansible/inventory.ini
+[webservers]
+localhost ansible_connection=local
+aditya@lima-devops:~/devops-lab3$ cat ansible/deploy.yml
+---
+- name: Configure and deploy Lab 3 application
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Deploy application
+      ansible.builtin.copy:
+        src: ../app/index.html
+        dest: /var/www/html/index.html
+        mode: '0644'
+
+    - name: Start and enable Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: true
+aditya@lima-devops:~/devops-lab3$ ansible -i ansible/inventory.ini webservers -m ping
+localhost | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+aditya@lima-devops:~/devops-lab3$ 

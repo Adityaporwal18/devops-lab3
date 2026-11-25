@@ -1,0 +1,15 @@
+aditya@lima-devops:~/devops-lab3$ grep -n -A3 "ENABLE_NEW_FEATURE" monitoring/app.py monitoring/compose.yaml
+monitoring/app.py:11:    if os.getenv("ENABLE_NEW_FEATURE", "false").lower() == "true":
+monitoring/app.py-12-        return "DevOps Lab 3 - NEW FEATURE ENABLED"
+monitoring/app.py-13-    return "DevOps Lab 3 - Prometheus Monitoring"
+monitoring/app.py-14-
+--
+monitoring/compose.yaml:5:      - ENABLE_NEW_FEATURE=${ENABLE_NEW_FEATURE:-false}
+monitoring/compose.yaml-6-    ports:
+monitoring/compose.yaml-7-      - "5002:5002"
+monitoring/compose.yaml-8-
+aditya@lima-devops:~/devops-lab3$ curl -s http://localhost:5002/; echo
+DevOps Lab 3 - Prometheus Monitoring
+aditya@lima-devops:~/devops-lab3$ docker compose -f monitoring/compose.yaml exec -T app printenv ENABLE_NEW_FEATURE
+false
+aditya@lima-devops:~/devops-lab3$ 

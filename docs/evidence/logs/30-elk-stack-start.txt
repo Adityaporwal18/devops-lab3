@@ -1,0 +1,45 @@
+aditya@lima-devops:~/devops-lab3$ docker compose -f monitoring/compose.yaml down
+[+] down 4/4
+ ✔ Container monitoring-prometheus-1 Removed                                                                               0.8s
+ ✔ Container monitoring-grafana-1    Removed                                                                               1.2s
+ ✔ Container monitoring-app-1        Removed                                                                              10.3s
+ ✔ Network monitoring_default        Removed                                                                               0.1s
+aditya@lima-devops:~/devops-lab3$ sudo systemctl stop jenkins
+aditya@lima-devops:~/devops-lab3$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       558Mi       1.7Gi       1.3Mi       1.7Gi       3.3Gi
+Swap:             0B          0B          0B
+aditya@lima-devops:~/devops-lab3$ cat elk/logstash/pipeline/logstash.conf
+input {
+  tcp {
+    port => 5000
+    codec => json_lines
+  }
+}
+output {
+  elasticsearch {
+    hosts => ["http://elasticsearch:9200"]
+    index => "devops-lab3"
+  }
+  stdout { codec => rubydebug }
+}
+aditya@lima-devops:~/devops-lab3$ docker compose -f elk/compose.yaml up -d --quiet-pull
+[+] up 7/7
+ ✔ Image docker.elastic.co/elasticsearch/elasticsearch:8.17.3 Pulled                                                     108.3s
+ ✔ Image docker.elastic.co/logstash/logstash:8.17.3           Pulled                                                     104.2s
+ ✔ Image docker.elastic.co/kibana/kibana:8.17.3               Pulled                                                     134.4s
+ ✔ Network elk_default                                        Created                                                      0.2s
+ ✔ Container elk-elasticsearch-1                              Started                                                      1.8s
+ ✔ Container elk-kibana-1                                     Started                                                      1.2s
+ ✔ Container elk-logstash-1                                   Started                                                      0.8s
+aditya@lima-devops:~/devops-lab3$ until curl -s http://localhost:9200 > /dev/null; do sleep 3; done; curl -s http://localhost:9200 | grep -E '"number"|"cluster_name"|tagline'
+docker compose -f elk/compose.yaml ps --format 'table {{.Service}}\t{{.State}}\t{{.Ports}}'
+  "cluster_name" : "docker-cluster",
+    "number" : "8.17.3",
+  "tagline" : "You Know, for Search"
+aditya@lima-devops:~/devops-lab3$ docker compose -f elk/compose.yaml ps --format 'table {{.Service}}\t{{.State}}\t{{.Ports}}'
+SERVICE         STATE     PORTS
+elasticsearch   running   0.0.0.0:9200->9200/tcp, [::]:9200->9200/tcp, 9300/tcp
+kibana          running   127.0.0.1:5601->5601/tcp
+logstash        running   5044/tcp, 9600/tcp, 127.0.0.1:5003->5000/tcp
+aditya@lima-devops:~/devops-lab3$ 

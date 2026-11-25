@@ -1,0 +1,16 @@
+aditya@lima-devops:~/devops-lab3/terraform$ terraform apply -auto-approve tfplan
+docker_image.nginx: Creating...
+docker_image.nginx: Creation complete after 0s [id=sha256:b50897d5c7b1aa08067c3d90c5e8b3e47ec4e3c91c91446f67820228f7b41e34nginx:alpine]
+docker_container.web: Creating...
+docker_container.web: Creation complete after 1s [id=07b6932651beea4d0396da10db0167a2f1945c446886e912f8831040596dfed8]
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+aditya@lima-devops:~/devops-lab3/terraform$ terraform state list
+docker_container.web
+docker_image.nginx
+aditya@lima-devops:~/devops-lab3/terraform$ docker ps --filter name=lab3-terraform-web
+CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS                  NAMES
+07b6932651be   b50897d5c7b1   "/docker-entrypoint.…"   3 seconds ago   Up 3 seconds   0.0.0.0:8085->80/tcp   lab3-terraform-web
+aditya@lima-devops:~/devops-lab3/terraform$ curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:8085/
+HTTP 200
+aditya@lima-devops:~/devops-lab3/terraform$ 

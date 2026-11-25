@@ -1,0 +1,24 @@
+aditya@lima-devops:~/devops-lab3$ git status --short
+ M Jenkinsfile
+ M elk/compose.yaml
+?? jenkins/
+?? scripts/
+aditya@lima-devops:~/devops-lab3$ git add -A
+aditya@lima-devops:~/devops-lab3$ git commit -q -m "Add security gate to the pipeline, ELK heap limits, log sender and Jenkins job configuration"
+aditya@lima-devops:~/devops-lab3$ git push
+Enumerating objects: 40, done.
+Counting objects: 100% (40/40), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (23/23), done.
+Writing objects: 100% (30/30), 4.84 KiB | 707.00 KiB/s, done.
+Total 30 (delta 6), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (6/6), completed with 4 local objects.
+To https://github.com/Adityaporwal18/devops-lab3.git
+   b18a157..addccf9  main -> main
+aditya@lima-devops:~/devops-lab3$ git log --oneline -n 6
+addccf9 (HEAD -> main, origin/main, origin/HEAD) Add security gate to the pipeline, ELK heap limits, log sender and Jenkins job configuration
+4e38c70 Provision Grafana data source and dashboard from files; keep the admin password out of Git
+eb9406f Remove Terraform's licence file that was committed by mistake
+feedd95 Remove outdated evidence, reports and docs before re-running Lab 3
+b18a157 Initial commit
+aditya@lima-devops:~/devops-lab3$ 

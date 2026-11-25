@@ -1,0 +1,26 @@
+aditya@lima-devops:~/devops-lab3$ ansible --version | head -n 1
+ansible [core 2.16.3]
+aditya@lima-devops:~/devops-lab3$ terraform version | head -n 1
+Terraform v1.17.2
+aditya@lima-devops:~/devops-lab3$ docker --version
+Docker version 29.10.1, build c48360f
+aditya@lima-devops:~/devops-lab3$ docker image inspect prom/prometheus:latest grafana/grafana:latest --format '{{index .RepoTags 0}}  version {{index .Config.Labels "org.opencontainers.image.version"}}'
+prom/prometheus:latest  version 
+grafana/grafana:latest  version 
+aditya@lima-devops:~/devops-lab3$ docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E "elastic|selenium"
+selenium/standalone-chromium:latest
+docker.elastic.co/kibana/kibana:8.17.3
+docker.elastic.co/elasticsearch/elasticsearch:8.17.3
+docker.elastic.co/logstash/logstash:8.17.3
+aditya@lima-devops:~/devops-lab3$ .venv/bin/bandit --version | head -n 1
+bandit 1.9.4
+aditya@lima-devops:~/devops-lab3$ .venv/bin/pip-audit --version
+pip-audit 2.10.1
+aditya@lima-devops:~/devops-lab3$ .venv/bin/python -m pip show selenium | grep -E "^(Name|Version)"
+Name: selenium
+Version: 4.54.0
+aditya@lima-devops:~/devops-lab3$ ab -V | head -n 1
+This is ApacheBench, Version 2.3 <$Revision: 1903618 $>
+aditya@lima-devops:~/devops-lab3$ jenkins --version
+2.580.2
+aditya@lima-devops:~/devops-lab3$ 
